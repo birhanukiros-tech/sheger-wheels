@@ -2,6 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import cars from "@/data/cars.json";
+import { createCarSlug } from "@/lib/car-slug";
 
 export default function Home() {
   const featuredCars = cars.slice(0, 4);
@@ -47,6 +48,7 @@ export default function Home() {
                 <span className="h-2 w-2 rounded-full bg-green-500" />
                 Flexible car choices
               </span>
+
               <span className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-green-500" />
                 Simple demo booking
@@ -95,6 +97,7 @@ export default function Home() {
                 <p className="text-base font-bold text-[#252A34] sm:text-lg">
                   Your next journey starts here
                 </p>
+
                 <p className="mt-1 text-sm leading-6 text-[#667085]">
                   Explore cars in Addis Ababa
                 </p>
@@ -112,9 +115,11 @@ export default function Home() {
               <p className="text-sm font-semibold uppercase tracking-wider text-[#0866F5]">
                 Explore our collection
               </p>
+
               <h2 className="mt-2 text-3xl font-bold tracking-tight text-[#252A34] sm:text-4xl">
                 Featured Cars
               </h2>
+
               <p className="mt-3 max-w-xl leading-7 text-[#667085]">
                 Discover a selection of demo vehicles for different journeys
                 and budgets.
@@ -137,7 +142,7 @@ export default function Home() {
                 className="overflow-hidden rounded-2xl border border-[#E5EAF1] bg-white transition-shadow hover:shadow-lg"
               >
                 <Link
-                  href={`/cars/${car.id}`}
+                  href={`/cars/${createCarSlug(car)}`}
                   className="group block focus-visible:outline-offset-[-3px]"
                   aria-label={`View ${car.year} ${car.make} ${car.model}`}
                 >
@@ -165,6 +170,7 @@ export default function Home() {
                       <span className="text-xl font-bold text-[#0866F5]">
                         ETB {Number(car.dailyPrice).toLocaleString("en-US")}
                       </span>
+
                       <span className="text-sm text-[#667085]">/ day</span>
                     </div>
 
@@ -172,6 +178,7 @@ export default function Home() {
                       <span className="rounded-md bg-[#F4F7FB] px-2.5 py-1.5">
                         {car.seats} seats
                       </span>
+
                       <span className="rounded-md bg-[#F4F7FB] px-2.5 py-1.5">
                         {car.transmission}
                       </span>
