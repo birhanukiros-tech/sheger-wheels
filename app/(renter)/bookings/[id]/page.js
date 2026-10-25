@@ -1,234 +1,318 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { getBookingById } from "@/lib/bookings";
-import { formatCurrency, formatDate } from "@/lib/format";
-import cars from "@/data/cars.json";
+import { getBookingsByRenter } from "@/lib/bookings";
+import carsData from "@/data/cars.json";
 
-const statusStyles = {
-  pending: "bg-amber-50 text-amber-800 ring-amber-200",
-  confirmed: "bg-blue-50 text-blue-800 ring-blue-200",
-  active: "bg-emerald-50 text-emerald-800 ring-emerald-200",
-  completed: "bg-slate-100 text-slate-700 ring-slate-200",
-  cancelled: "bg-red-50 text-red-700 ring-red-200",
-  rejected: "bg-red-50 text-red-700 ring-red-200",
-};
+const currencyFormatter = new Intl.NumberFormat("en-ET", {
+  style: "currency",
+  currency: "ETB",
+  maximumFractionDigits: 0,
+});
 
-const statusDescriptions = {
-  pending: "Your request has been submitted and is waiting for the owner's response.",
-  confirmed: "Your booking has been accepted. Review your rental details before pickup.",
-  active: "Your rental is in progress. You can open the tracking page for rental information.",
-  completed: "This rental is complete. You can leave a review if you haven't already.",
-  cancelled: "This booking has been cancelled.",
-  rejected: "The owner has declined this booking request.",
-};
+const dateFormatter = new Intl.DateTimeFormat("en-ET", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
 
-export default function BookingDetailsPage() {
-  const params = useParams();
-  const router = useRouter();
-  const bookingId = params.id;
+function formatDate(value) {
+  if (!value) return "Date not set";
 
-  const [booking, setBooking] = useState(null);
-  const [car, setCar] = useState(null);
-  const [authChecked, setAuthChecked] = useState(false);
+  const date = new Date(`${value.slice(0, 10)}T00:00:00`);
+
+  return Number.isNaN(date.getTime())
+    ? "Date not set"
+    : dateFormatter.format(date);
+}
+
+function getToday() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
+function getCar(carId) {
+  return carsData.find((car) => car.id === carId);
+}
+
+function getCarName(carId) {
+  const car = getCar(carId);
+  return car ? `${car.make} ${car.model} ${car.year}` : "Rental car";
+}
+
+function getStatusStyle(status) {
+  switch (status) {
+    case "confirmed":
+      return "bg-blue-50 text-blue-700";
+    case "active":
+      return "bg-emerald-50 text-emerald-700";
+    case "completed":
+      return "bg-slate-100 text-slate-700";
+    case "cancelled":
+    case "rejected":
+      return "bg-red-50 text-red-700";
+    default:
+      return "bg-amber-50 text-amber-700";
+  }
+}
+
+function StatCard({ title, value, description, symbol }) {
+  return (
+    <article className="rounded-2xl border border-border bg-white p-5 shadow-sm sm:p-6">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-muted">{title}</p>
+          <p className="mt-3 text-3xl font-bold tracking-tight text-foreground">
+            {value}
+          </p>
+        </div>
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-2xl text-primary">
+          {symbol}
+        </div>
+      </div>
+      <p className="mt-3 text-xs leading-5 text-muted">{description}</p>
+    </article>
+  );
+}
+
+export default function RenterDashboardPage() {
+  const [user, setUser] = useState(null);
+  const [bookings, setBookings] = useState([]);
+  const [today, setToday] = useState("");
 
   useEffect(() => {
-    const user = getCurrentUser();
+    const currentUser = getCurrentUser();
+    setUser(currentUser);
+    setToday(getToday());
 
-    if (!user || user.role !== "renter") {
-      router.replace(
-        `/signin?next=${encodeURIComponent(`/bookings/${bookingId}`)}`
-      );
-      return;
+    if (currentUser?.id) {
+      setBookings(getBookingsByRenter(currentUser.id));
     }
+  }, []);
 
-    const currentBooking = getBookingById(String(bookingId));
+  const validBookings = Array.isArray(bookings) ? bookings : [];
 
-    if (!currentBooking || currentBooking.renterId !== user.id) {
-      setAuthChecked(true);
-      return;
-    }
+  const upcomingBookings = validBookings
+    .filter(
+      (booking) =>
+        ["pending", "confirmed", "active"].includes(booking.status) &&
+        booking.endDate >= today
+    )
+    .sort((a, b) => a.startDate.localeCompare(b.startDate))
+    .slice(0, 3);
 
-    setBooking(currentBooking);
-    setCar(
-      cars.find((item) => String(item.id) === String(currentBooking.carId)) ?? null
-    );
-    setAuthChecked(true);
-  }, [bookingId, router]);
+  const recentBookings = [...validBookings]
+    .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""))
+    .slice(0, 4);
 
-  if (!authChecked) {
-    return (
-      <main className="mx-auto max-w-5xl px-4 py-16">
-        <p className="text-center text-slate-500">Loading booking details…</p>
-      </main>
-    );
-  }
+  const activeCount = validBookings.filter(
+    (booking) => booking.status === "active"
+  ).length;
 
-  if (!booking) {
-    return (
-      <main className="mx-auto max-w-3xl px-4 py-16">
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
-          <h1 className="text-2xl font-bold text-slate-900">Booking not found</h1>
-          <p className="mt-3 text-slate-600">
-            This booking may not exist or may not belong to your account.
-          </p>
-          <Link
-            href="/bookings"
-            className="mt-6 inline-flex rounded-lg bg-[#0866F5] px-5 py-3 font-semibold text-white hover:bg-[#0754C7]"
-          >
-            Back to my bookings
-          </Link>
-        </div>
-      </main>
-    );
-  }
+  const completedCount = validBookings.filter(
+    (booking) => booking.status === "completed"
+  ).length;
 
-  const status = booking.status.toLowerCase();
+  const pendingCount = validBookings.filter(
+    (booking) => booking.status === "pending"
+  ).length;
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-10 sm:px-6 sm:py-14">
-      <div className="mx-auto max-w-5xl">
-        <Link
-          href="/bookings"
-          className="text-sm font-semibold text-[#0866F5] hover:underline"
-        >
-          ← Back to my bookings
-        </Link>
-
-        <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <section className="min-h-[70vh] bg-surface px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-wider text-[#0866F5]">
-              Rental details
+            <p className="text-sm font-semibold uppercase tracking-wider text-primary">
+              Renter Dashboard
             </p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-              Your booking
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+              {user?.name ? `Welcome, ${user.name}` : "Welcome to Sheggar Wheels"}
             </h1>
-            <p className="mt-2 break-all text-sm text-slate-500">
-              Booking ID: {booking.id}
+            <p className="mt-3 max-w-2xl text-base leading-7 text-muted">
+              Manage your rentals, keep track of your bookings, and find your
+              next ride in Addis Ababa.
             </p>
           </div>
 
-          <span
-            className={`inline-flex w-fit rounded-full px-4 py-2 text-sm font-semibold capitalize ring-1 ${
-              statusStyles[status] || statusStyles.pending
-            }`}
+          <Link
+            href="/cars"
+            className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-hover"
           >
-            {status}
-          </span>
+            <span aria-hidden="true">⌕</span> Find a car
+          </Link>
         </div>
 
-        <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="grid md:grid-cols-[0.9fr_1.1fr]">
-            <div className="flex min-h-64 items-center justify-center bg-slate-100">
-              {car?.image ? (
-                <img
-                  src={car.image}
-                  alt={`${car.year} ${car.make} ${car.model}`}
-                  className="h-full max-h-80 w-full object-cover"
-                />
-              ) : (
-                <p className="text-sm text-slate-400">Car image unavailable</p>
-              )}
-            </div>
+        <div className="mb-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard title="Total bookings" value={validBookings.length} description="All your saved rental bookings" symbol="▤" />
+          <StatCard title="Upcoming rentals" value={upcomingBookings.length} description="Pending, confirmed, or active rentals" symbol="▦" />
+          <StatCard title="Active rentals" value={activeCount} description="Rentals currently marked active" symbol="🚗" />
+          <StatCard title="Completed rentals" value={completedCount} description="Rentals marked as completed" symbol="✓" />
+        </div>
 
-            <div className="p-6 sm:p-8">
-              <p className="text-sm font-semibold text-[#0866F5]">
-                Selected vehicle
-              </p>
-              <h2 className="mt-2 text-2xl font-bold text-slate-900">
-                {car
-                  ? `${car.year} ${car.make} ${car.model}`
-                  : "Rental vehicle"}
-              </h2>
-
-              <p className="mt-3 leading-7 text-slate-600">
-                {statusDescriptions[status] || "Review the details of your rental booking."}
-              </p>
-
-              <div className="mt-6 grid grid-cols-2 gap-5 border-t border-slate-200 pt-5">
+        <div className="grid items-start gap-8 lg:grid-cols-[1.4fr_1fr]">
+          <div className="space-y-8">
+            <section>
+              <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm text-slate-500">Pickup date</p>
-                  <p className="mt-1 font-semibold text-slate-900">
-                    {formatDate(booking.startDate)}
-                  </p>
+                  <h2 className="text-xl font-bold text-foreground">Upcoming rentals</h2>
+                  <p className="mt-1 text-sm text-muted">Your next rental journeys</p>
                 </div>
-                <div>
-                  <p className="text-sm text-slate-500">Return date</p>
-                  <p className="mt-1 font-semibold text-slate-900">
-                    {formatDate(booking.endDate)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500">Duration</p>
-                  <p className="mt-1 font-semibold text-slate-900">
-                    {booking.totalDays} {booking.totalDays === 1 ? "day" : "days"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500">Price per day</p>
-                  <p className="mt-1 font-semibold text-slate-900">
-                    {formatCurrency(booking.dailyPrice)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-slate-200 bg-slate-50 p-6 sm:p-8">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm text-slate-500">Total rental cost</p>
-                <p className="mt-1 text-3xl font-bold text-slate-900">
-                  {formatCurrency(booking.totalPrice)}
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row">
-                {status === "confirmed" && (
-                  <Link
-                    href={`/bookings/${encodeURIComponent(booking.id)}/track`}
-                    className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#0866F5] px-5 py-3 text-sm font-semibold text-white hover:bg-[#0754C7]"
-                  >
-                    Track rental
-                  </Link>
-                )}
-
-                {status === "active" && (
-                  <Link
-                    href={`/bookings/${encodeURIComponent(booking.id)}/track`}
-                    className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#0866F5] px-5 py-3 text-sm font-semibold text-white hover:bg-[#0754C7]"
-                  >
-                    Track rental
-                  </Link>
-                )}
-
-                {status === "completed" && (
-                  <Link
-                    href={`/bookings/${encodeURIComponent(booking.id)}/review`}
-                    className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#0866F5] px-5 py-3 text-sm font-semibold text-white hover:bg-[#0754C7]"
-                  >
-                    Leave a review
-                  </Link>
-                )}
-
-                <Link
-                  href="/bookings"
-                  className="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-                >
-                  All bookings
+                <Link href="/bookings" className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-primary hover:underline">
+                  All bookings <span aria-hidden="true">→</span>
                 </Link>
               </div>
-            </div>
-          </div>
-        </section>
 
-        <p className="mt-5 text-sm leading-6 text-slate-500">
-          Booking requests begin with pending status. The owner must approve a request before it becomes confirmed.
-        </p>
+              {upcomingBookings.length > 0 ? (
+                <div className="space-y-4">
+                  {upcomingBookings.map((booking) => {
+                    const car = getCar(booking.carId);
+
+                    return (
+                      <article key={booking.id} className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+                        <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
+                          {car?.image ? (
+                            <img src={car.image} alt={getCarName(booking.carId)} className="h-32 w-full rounded-xl bg-slate-100 object-cover sm:h-24 sm:w-32" />
+                          ) : (
+                            <div className="flex h-24 w-full items-center justify-center rounded-xl bg-blue-50 text-3xl text-primary sm:w-32">🚗</div>
+                          )}
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="font-bold text-foreground">{getCarName(booking.carId)}</h3>
+                              <span className={`rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${getStatusStyle(booking.status)}`}>
+                                {booking.status}
+                              </span>
+                            </div>
+                            <p className="mt-2 text-sm text-muted">
+                              {formatDate(booking.startDate)} – {formatDate(booking.endDate)}
+                            </p>
+                            <p className="mt-2 text-sm font-semibold text-foreground">
+                              {currencyFormatter.format(booking.totalPrice ?? 0)}
+                            </p>
+                          </div>
+
+                          <Link href={`/bookings/${booking.id}`} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-semibold text-foreground transition hover:border-primary hover:text-primary">
+                            Details →
+                          </Link>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-border bg-white px-6 py-10 text-center">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-2xl text-primary">▦</div>
+                  <h3 className="mt-4 font-bold text-foreground">No upcoming rentals</h3>
+                  <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted">
+                    Once you make a booking, your upcoming rental details will appear here.
+                  </p>
+                  <Link href="/cars" className="mt-5 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-hover">
+                    Browse available cars →
+                  </Link>
+                </div>
+              )}
+            </section>
+
+            <section>
+              <div className="mb-4">
+                <h2 className="text-xl font-bold text-foreground">Recent activity</h2>
+                <p className="mt-1 text-sm text-muted">Your latest booking history</p>
+              </div>
+
+              <div className="overflow-hidden rounded-2xl border border-border bg-white">
+                {recentBookings.length > 0 ? (
+                  recentBookings.map((booking, index) => (
+                    <div key={booking.id} className={`flex items-center gap-3 p-4 sm:p-5 ${index > 0 ? "border-t border-border" : ""}`}>
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-lg text-muted">◷</div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-foreground">{getCarName(booking.carId)}</p>
+                        <p className="mt-1 text-xs text-muted">Booked {formatDate((booking.createdAt || "").slice(0, 10))}</p>
+                      </div>
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${getStatusStyle(booking.status)}`}>
+                        {booking.status}
+                      </span>
+                      <Link href={`/bookings/${booking.id}`} aria-label={`View booking for ${getCarName(booking.carId)}`} className="rounded-lg p-2 text-muted transition hover:bg-blue-50 hover:text-primary">→</Link>
+                    </div>
+                  ))
+                ) : (
+                  <div className="px-6 py-8 text-center">
+                    <p className="font-semibold text-foreground">No booking activity yet</p>
+                    <p className="mt-2 text-sm text-muted">Your booking history will appear here.</p>
+                  </div>
+                )}
+
+                {validBookings.length > 4 && (
+                  <div className="border-t border-border p-4 text-center">
+                    <Link href="/bookings" className="text-sm font-semibold text-primary hover:underline">View all booking history</Link>
+                  </div>
+                )}
+              </div>
+            </section>
+          </div>
+
+          <aside className="space-y-6">
+            <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+              <h2 className="text-lg font-bold text-foreground">Quick actions</h2>
+              <p className="mt-1 text-sm text-muted">Get where you need to go</p>
+
+              <div className="mt-5 space-y-3">
+                <Link href="/cars" className="flex items-center gap-3 rounded-xl border border-border p-4 transition hover:border-primary hover:bg-blue-50/50">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-xl text-primary">🚗</span>
+                  <span className="flex-1">
+                    <span className="block text-sm font-semibold text-foreground">Browse cars</span>
+                    <span className="mt-1 block text-xs text-muted">Find your next ride</span>
+                  </span>
+                  <span className="text-muted">→</span>
+                </Link>
+
+                <Link href="/bookings" className="flex items-center gap-3 rounded-xl border border-border p-4 transition hover:border-primary hover:bg-blue-50/50">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-xl text-primary">▦</span>
+                  <span className="flex-1">
+                    <span className="block text-sm font-semibold text-foreground">Manage bookings</span>
+                    <span className="mt-1 block text-xs text-muted">View rental details</span>
+                  </span>
+                  <span className="text-muted">→</span>
+                </Link>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+              <h2 className="text-lg font-bold text-foreground">Booking overview</h2>
+              <div className="mt-5 space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="flex items-center gap-2 text-sm text-muted"><span className="h-2.5 w-2.5 rounded-full bg-amber-400" /> Awaiting confirmation</span>
+                  <span className="font-bold text-foreground">{pendingCount}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="flex items-center gap-2 text-sm text-muted"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Active rentals</span>
+                  <span className="font-bold text-foreground">{activeCount}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="flex items-center gap-2 text-sm text-muted"><span className="h-2.5 w-2.5 rounded-full bg-slate-400" /> Completed rentals</span>
+                  <span className="font-bold text-foreground">{completedCount}</span>
+                </div>
+              </div>
+              <Link href="/bookings" className="mt-6 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground transition hover:border-primary hover:text-primary">
+                View all bookings →
+              </Link>
+            </section>
+
+            <div className="rounded-2xl bg-slate-900 p-6 text-white">
+              <div className="text-2xl" aria-hidden="true">📍</div>
+              <h2 className="mt-4 text-lg font-bold">Ready for your next journey?</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-300">
+                Explore available cars and choose the one that suits your plans.
+              </p>
+              <Link href="/cars" className="mt-5 inline-flex items-center gap-2 font-semibold text-white transition hover:text-blue-300">
+                Find your car →
+              </Link>
+            </div>
+          </aside>
+        </div>
       </div>
-    </main>
+    </section>
   );
 }
