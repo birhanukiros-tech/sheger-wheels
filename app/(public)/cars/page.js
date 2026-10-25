@@ -1,4 +1,3 @@
-
 "use client";
 
 import Image from "next/image";
@@ -41,11 +40,9 @@ export default function CarsPage() {
 
       const price = Number(car.dailyPrice);
 
-      const matchesMinPrice =
-        minimum === null || price >= minimum;
+      const matchesMinPrice = minimum === null || price >= minimum;
 
-      const matchesMaxPrice =
-        maximum === null || price <= maximum;
+      const matchesMaxPrice = maximum === null || price <= maximum;
 
       return (
         matchesSearch &&
@@ -66,7 +63,6 @@ export default function CarsPage() {
   return (
     <section className="min-h-screen bg-[#F4F7FB]">
       <div className="mx-auto max-w-[1200px] px-5 py-10 sm:px-8 sm:py-14">
-        {/* Page heading */}
         <div className="max-w-2xl">
           <p className="text-sm font-semibold uppercase tracking-wider text-[#0866F5]">
             Find your next ride
@@ -82,7 +78,6 @@ export default function CarsPage() {
           </p>
         </div>
 
-        {/* Search and filters */}
         <div className="mt-8 rounded-2xl border border-[#E5EAF1] bg-white p-4 sm:p-5">
           <div>
             <label
@@ -103,7 +98,6 @@ export default function CarsPage() {
           </div>
 
           <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Transmission filter */}
             <div>
               <label
                 htmlFor="transmission"
@@ -128,7 +122,6 @@ export default function CarsPage() {
               </select>
             </div>
 
-            {/* Minimum price */}
             <div>
               <label
                 htmlFor="min-price"
@@ -148,7 +141,6 @@ export default function CarsPage() {
               />
             </div>
 
-            {/* Maximum price */}
             <div>
               <label
                 htmlFor="max-price"
@@ -184,83 +176,91 @@ export default function CarsPage() {
           </div>
         </div>
 
-        {/* Car listings */}
         {filteredCars.length > 0 ? (
           <div className="mt-8 grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredCars.map((car) => (
-              <article
-                key={car.id}
-                className="flex h-full flex-col overflow-hidden rounded-2xl border border-[#E5EAF1] bg-white transition-shadow hover:shadow-lg"
-              >
-                <Link
-                  href={`/cars/${createCarSlug(car)}`}
-                  className="group flex flex-1 flex-col focus-visible:outline-offset-[-3px]"
-                  aria-label={`View ${car.year} ${car.make} ${car.model}`}
+            {filteredCars.map((car) => {
+              const carSlug = createCarSlug(car);
+              const carDetailsHref = `/cars/${carSlug}`;
+
+              return (
+                <article
+                  key={car.id}
+                  className="flex h-full flex-col overflow-hidden rounded-2xl border border-[#E5EAF1] bg-white transition-shadow hover:shadow-lg"
                 >
-                  <div className="h-52 shrink-0 overflow-hidden bg-[#F4F7FB]">
-                    <Image
-                      src={car.image}
-                      alt={`${car.year} ${car.make} ${car.model}`}
-                      width={600}
-                      height={400}
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                  </div>
+                  <Link
+                    href={carDetailsHref}
+                    className="group flex flex-1 flex-col focus-visible:outline-offset-[-3px]"
+                    aria-label={`View ${car.year} ${car.make} ${car.model}`}
+                  >
+                    <div className="h-52 shrink-0 overflow-hidden bg-[#F4F7FB]">
+                      <Image
+                        src={car.image}
+                        alt={`${car.year} ${car.make} ${car.model}`}
+                        width={600}
+                        height={400}
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    </div>
 
-                  <div className="flex flex-1 flex-col p-5">
-                    <p className="text-xs font-medium text-[#667085]">
-                      {car.year} · {car.location}
-                    </p>
+                    <div className="flex flex-1 flex-col p-5">
+                      <p className="text-xs font-medium text-[#667085]">
+                        {car.year} · {car.location}
+                      </p>
 
-                    <h2 className="mt-2 min-h-[56px] text-xl font-bold text-[#252A34]">
-                      {car.make} {car.model}
-                    </h2>
+                      <h2 className="mt-2 min-h-[56px] text-xl font-bold text-[#252A34]">
+                        {car.make} {car.model}
+                      </h2>
 
-                    <p className="mt-2 line-clamp-2 min-h-12 text-sm leading-6 text-[#667085]">
-                      {car.description}
-                    </p>
+                      <p className="mt-2 line-clamp-2 min-h-12 text-sm leading-6 text-[#667085]">
+                        {car.description}
+                      </p>
 
-                    <div className="mt-auto pt-4">
-                      <div className="flex min-h-8 items-baseline gap-1">
-                        <span className="text-xl font-bold text-[#0866F5]">
-                          ETB{" "}
-                          {Number(car.dailyPrice).toLocaleString("en-US")}
-                        </span>
+                      <div className="mt-auto pt-4">
+                        <div className="flex min-h-8 items-baseline gap-1">
+                          <span className="text-xl font-bold text-[#0866F5]">
+                            ETB {Number(car.dailyPrice).toLocaleString("en-US")}
+                          </span>
 
-                        <span className="text-sm text-[#667085]">
-                          / day
-                        </span>
-                      </div>
+                          <span className="text-sm text-[#667085]">/ day</span>
+                        </div>
 
-                      <div className="mt-4 flex min-h-[62px] flex-wrap content-start gap-2 border-t border-[#E5EAF1] pt-4 text-xs text-[#667085]">
-                        <span className="rounded-md bg-[#F4F7FB] px-2.5 py-1.5">
-                          {car.seats} seats
-                        </span>
+                        <div className="mt-4 flex min-h-[62px] flex-wrap content-start gap-2 border-t border-[#E5EAF1] pt-4 text-xs text-[#667085]">
+                          <span className="rounded-md bg-[#F4F7FB] px-2.5 py-1.5">
+                            {car.seats} seats
+                          </span>
 
-                        <span className="rounded-md bg-[#F4F7FB] px-2.5 py-1.5">
-                          {car.transmission}
-                        </span>
+                          <span className="rounded-md bg-[#F4F7FB] px-2.5 py-1.5">
+                            {car.transmission}
+                          </span>
 
-                        <span className="rounded-md bg-[#F4F7FB] px-2.5 py-1.5">
-                          {car.color}
-                        </span>
-                      </div>
+                          <span className="rounded-md bg-[#F4F7FB] px-2.5 py-1.5">
+                            {car.color}
+                          </span>
+                        </div>
 
-                      <div className="mt-4 flex min-h-11 items-center justify-center rounded-lg bg-[#0866F5] px-4 py-2 text-sm font-semibold text-white transition-colors group-hover:bg-[#0754C7]">
-                        View Details
+                        <div className="mt-4 flex min-h-11 items-center justify-center rounded-lg border border-[#0866F5] px-4 py-2 text-sm font-semibold text-[#0866F5] transition-colors group-hover:bg-blue-50">
+                          View Details
+                        </div>
                       </div>
                     </div>
+                  </Link>
+
+                  <div className="px-5 pb-5">
+                    <Link
+                      href={`/checkout?carId=${encodeURIComponent(car.id)}`}
+                      className="flex min-h-11 w-full items-center justify-center rounded-lg bg-[#0866F5] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#0754C7]"
+                    >
+                      Book Now →
+                    </Link>
                   </div>
-                </Link>
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
         ) : (
           <div className="mt-8 rounded-2xl border border-dashed border-[#D0D7E2] bg-white px-5 py-14 text-center">
-            <h2 className="text-lg font-bold text-[#252A34]">
-              No cars found
-            </h2>
+            <h2 className="text-lg font-bold text-[#252A34]">No cars found</h2>
 
             <p className="mt-2 text-sm leading-6 text-[#667085]">
               Try changing your search or price filters.
@@ -275,7 +275,6 @@ export default function CarsPage() {
             </button>
           </div>
         )}
-
       </div>
     </section>
   );

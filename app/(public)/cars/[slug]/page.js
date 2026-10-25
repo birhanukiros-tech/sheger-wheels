@@ -1,41 +1,51 @@
 
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import cars from "@/data/cars.json";
 import { createCarSlug } from "@/lib/car-slug";
+import { getCurrentUser } from "@/lib/auth";
 
 function getCarBySlug(slug) {
   return cars.find((car) => createCarSlug(car) === slug);
 }
 
-export async function generateMetadata({ params }) {
-  const { slug } = await params;
+export default function CarDetailsPage() {
+  const { slug } = useParams();
+  const router = useRouter();
+
+  const [user, setUser] = useState(undefined);
+
   const car = getCarBySlug(slug);
 
-  if (!car) {
-    return {
-      title: "Car Not Found",
-    };
-  }
+  useEffect(() => {
+    setUser(getCurrentUser());
+  }, []);
 
-  return {
-    title: `${car.year} ${car.make} ${car.model}`,
-    description: car.description,
-  };
-}
-
-export default async function CarDetailsPage({ params }) {
-  const { slug } = await params;
-  const car = getCarBySlug(slug);
-
-  if (!car) {
-    notFound();
-  }
+  if (!car) notFound();
 
   const otherCars = cars
     .filter((item) => item.id !== car.id)
     .slice(0, 3);
+
+  function handleBooking() {
+    if (!user) {
+      router.push(
+        `/signin?next=${encodeURIComponent(`/cars/${slug}`)}`
+      );
+      return;
+    }
+
+    if (user.role !== "renter") {
+      window.alert("Please sign in with a renter account to book a car.");
+      return;
+    }
+
+    router.push(`/checkout?carId=${encodeURIComponent(car.id)}`);
+  }
 
   return (
     <section className="min-h-screen bg-[#F4F7FB]">
@@ -102,12 +112,20 @@ export default async function CarDetailsPage({ params }) {
               </div>
 
               <div className="mt-auto pt-8">
-                <Link
-                  href={`/signin?next=${encodeURIComponent(`/cars/${slug}`)}`}
-                  className="flex min-h-12 w-full items-center justify-center rounded-lg bg-[#0866F5] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#0754C7]"
+                <button
+                  type="button"
+                  onClick={handleBooking}
+                  disabled={user === undefined}
+                  className="flex min-h-12 w-full items-center justify-center rounded-lg bg-[#0866F5] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#0754C7] disabled:cursor-wait disabled:opacity-60"
                 >
-                  Sign in to continue
-                </Link>
+                  {user === undefined
+                    ? "Loading account..."
+                    : user?.role === "renter"
+                      ? "Book This Car"
+                      : user
+                        ? "Sign in as a Renter to Book"
+                        : "Sign in to Continue"}
+                </button>
 
                 <p className="mt-3 text-center text-xs leading-5 text-[#667085]">
                   Demo listing only. Price and availability are not confirmed

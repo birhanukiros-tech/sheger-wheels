@@ -1,27 +1,35 @@
 
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { getCurrentUser, signOutDemoUser } from "@/lib/auth";
 
-const navigationLinks = [
+const navigation = [
   { label: "Home", href: "/" },
   { label: "Browse Cars", href: "/cars" },
+  { label: "Checkout", href: "/checkout" },
 ];
 
-const roleLabels = {
-  renter: "Renter",
-  owner: "Owner",
-  admin: "Admin",
+const dashboardRoutes = {
+  renter: "/dashboard",
+  owner: "/owner",
+  admin: "/admin",
 };
 
+function roleLabel(role) {
+  if (role === "renter") return "Renter";
+  if (role === "owner") return "Owner";
+  if (role === "admin") return "Admin";
+  return "";
+}
+
 export default function Header() {
-  const [user, setUser] = useState(null);
-  const pathname = usePathname();
   const router = useRouter();
+  const pathname = usePathname();
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     setUser(getCurrentUser());
@@ -35,61 +43,70 @@ export default function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[#E5EAF1] bg-white">
-      <div className="mx-auto flex min-h-20 max-w-[1200px] items-center justify-between gap-4 px-5 sm:gap-6 sm:px-8">
-        {/* Brand */}
-        <Link
-          href="/"
-          aria-label="Sheggar Wheels home"
-          className="flex shrink-0 items-center gap-2 sm:gap-3"
-        >
+    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
+        <Link href="/" className="flex shrink-0 items-center gap-3">
           <Image
             src="/images/hero/logo.jpg"
-            alt="Sheggar Wheels logo"
-            width={48}
-            height={48}
+            alt="Sheggar Wheels"
+            width={42}
+            height={42}
+            className="h-10 w-10 rounded-lg object-cover"
             priority
-            className="h-10 w-10 rounded-lg object-contain sm:h-12 sm:w-12"
           />
-
-          <span className="text-base font-bold tracking-tight text-[#252A34] sm:text-xl">
+          <span className="text-lg font-extrabold tracking-tight text-slate-900 sm:text-xl">
             Sheggar <span className="text-[#0866F5]">Wheels</span>
           </span>
         </Link>
 
-        {/* Main navigation */}
         <nav
           aria-label="Main navigation"
-          className="hidden items-center gap-8 md:flex"
+          className="order-3 flex w-full flex-wrap items-center gap-x-5 gap-y-3 text-sm font-semibold sm:order-none sm:w-auto"
         >
-          {navigationLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="text-sm font-medium text-[#252A34] transition-colors hover:text-[#0866F5]"
-            >
-              {link.label}
-            </Link>
-          ))}
+          {navigation.map((item) => {
+            const active =
+              item.href === "/"
+                ? pathname === "/"
+                : pathname === item.href ||
+                  pathname.startsWith(`${item.href}/`);
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`transition-colors hover:text-[#0866F5] ${
+                  active ? "text-[#0866F5]" : "text-slate-600"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
 
-        {/* Authentication actions */}
-        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-3">
           {user ? (
             <>
               <div className="hidden text-right sm:block">
-                <p className="max-w-40 truncate text-sm font-semibold text-[#252A34]">
-                  Welcome, {user.name}
+                <p className="max-w-36 truncate text-sm font-semibold text-slate-900">
+                  {user.name}
                 </p>
-                <p className="text-xs text-[#667085]">
-                  {roleLabels[user.role] ?? "User"} account
+                <p className="text-xs text-slate-500">
+                  {roleLabel(user.role)} account
                 </p>
               </div>
+
+              <Link
+                href={dashboardRoutes[user.role] || "/"}
+                className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-[#0866F5] hover:text-[#0866F5]"
+              >
+                Dashboard
+              </Link>
 
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E5EAF1] px-3 py-2 text-sm font-semibold text-[#252A34] transition-colors hover:border-[#0866F5] hover:text-[#0866F5] sm:px-4"
+                className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
               >
                 Sign Out
               </button>
@@ -98,14 +115,13 @@ export default function Header() {
             <>
               <Link
                 href="/signin"
-                className="rounded-lg px-2 py-2 text-sm font-semibold text-[#252A34] transition-colors hover:text-[#0866F5] sm:px-3"
+                className="text-sm font-semibold text-slate-700 transition hover:text-[#0866F5]"
               >
                 Sign In
               </Link>
-
               <Link
                 href="/signup"
-                className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#0866F5] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#0754C7] sm:px-5"
+                className="rounded-lg bg-[#0866F5] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0754C7]"
               >
                 Get Started
               </Link>
@@ -113,17 +129,6 @@ export default function Header() {
           )}
         </div>
       </div>
-
-      {user && (
-        <div className="border-t border-[#E5EAF1] px-5 py-2 sm:hidden">
-          <p className="truncate text-sm font-semibold text-[#252A34]">
-            Welcome, {user.name}
-            <span className="font-normal text-[#667085]">
-              {" "}· {roleLabels[user.role] ?? "User"}
-            </span>
-          </p>
-        </div>
-      )}
     </header>
   );
 }
