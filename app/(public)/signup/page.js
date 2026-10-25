@@ -5,22 +5,52 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { registerRenter } from "@/lib/auth";
+import { registerUser } from "@/lib/auth";
+
+const accountTypes = [
+  {
+    role: "renter",
+    title: "Create Account for Renter",
+    description: "Find cars, book rentals, and manage your bookings.",
+    icon: "🚗",
+  },
+  {
+    role: "owner",
+    title: "Create Account for Owner",
+    description: "List your cars and manage rental bookings.",
+    icon: "🔑",
+  },
+];
 
 export default function SignUpPage() {
   const router = useRouter();
 
+  const [selectedRole, setSelectedRole] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function handleSubmit(event) {
     event.preventDefault();
     setError("");
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
     setIsSubmitting(true);
 
-    const result = registerRenter({ name, email });
+    const result = registerUser({
+      name,
+      email,
+      password,
+      confirmPassword,
+      role: selectedRole,
+    });
 
     if (!result.success) {
       setError(result.message);
@@ -28,7 +58,7 @@ export default function SignUpPage() {
       return;
     }
 
-    router.replace("/dashboard");
+    router.replace(selectedRole === "owner" ? "/owner" : "/dashboard");
     router.refresh();
   }
 
@@ -57,87 +87,165 @@ export default function SignUpPage() {
           </p>
 
           <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Create your account.
+            {selectedRole ? "Create your account" : "Get started"}
           </h1>
 
           <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-muted sm:text-base">
-            Create a demo renter account and start exploring
-            the car-rental experience.
+            {selectedRole
+              ? `Create your ${selectedRole} account to get started.`
+              : "Choose the type of account you want to create."}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label
-              htmlFor="name"
-              className="mb-2 block text-sm font-semibold text-foreground"
-            >
-              Full name
-            </label>
+        {!selectedRole ? (
+          <div className="space-y-4">
+            {accountTypes.map((account) => (
+              <button
+                key={account.role}
+                type="button"
+                onClick={() => {
+                  setSelectedRole(account.role);
+                  setError("");
+                }}
+                className="flex w-full items-center gap-4 rounded-2xl border border-border bg-white p-5 text-left transition hover:border-primary hover:bg-blue-50/50 focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-2xl">
+                  {account.icon}
+                </span>
 
-            <input
-              id="name"
-              name="name"
-              type="text"
-              autoComplete="name"
-              required
-              minLength={2}
-              maxLength={80}
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Enter your full name"
-              className="min-h-12 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-blue-100"
-            />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-bold text-foreground">
+                    {account.title}
+                  </span>
+                  <span className="mt-1 block text-sm leading-5 text-muted">
+                    {account.description}
+                  </span>
+                </span>
+
+                <span className="text-xl text-primary" aria-hidden="true">
+                  →
+                </span>
+              </button>
+            ))}
           </div>
+        ) : (
+          <>
+            <div className="mb-6 flex items-center justify-between rounded-xl bg-blue-50 px-4 py-3">
+              <p className="text-sm font-semibold text-foreground">
+                {selectedRole === "renter" ? "Renter account" : "Owner account"}
+              </p>
 
-          <div>
-            <label
-              htmlFor="email"
-              className="mb-2 block text-sm font-semibold text-foreground"
-            >
-              Email address
-            </label>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedRole("");
+                  setError("");
+                }}
+                className="text-sm font-semibold text-primary hover:underline"
+              >
+                Change
+              </button>
+            </div>
 
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              maxLength={254}
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="you@example.com"
-              className="min-h-12 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-blue-100"
-            />
-          </div>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label htmlFor="name" className="mb-2 block text-sm font-semibold text-foreground">
+                  Full name
+                </label>
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  autoComplete="name"
+                  required
+                  minLength={2}
+                  maxLength={80}
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="Enter your full name"
+                  className="min-h-12 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
 
-          {error && (
-            <p
-              role="alert"
-              className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
-            >
-              {error}
-            </p>
-          )}
+              <div>
+                <label htmlFor="email" className="mb-2 block text-sm font-semibold text-foreground">
+                  Email address
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  maxLength={254}
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="you@example.com"
+                  className="min-h-12 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 font-semibold text-white shadow-md shadow-blue-600/20 transition hover:bg-primary-hover hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isSubmitting ? "Creating account..." : "Create account"}
-            {!isSubmitting && <span aria-hidden="true">→</span>}
-          </button>
-        </form>
+              <div>
+                <label htmlFor="password" className="mb-2 block text-sm font-semibold text-foreground">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="At least 8 characters"
+                  className="min-h-12 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="confirmPassword" className="mb-2 block text-sm font-semibold text-foreground">
+                  Confirm password
+                </label>
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  placeholder="Enter your password again"
+                  className="min-h-12 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+
+              {error && (
+                <p
+                  role="alert"
+                  className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+                >
+                  {error}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 font-semibold text-white shadow-md shadow-blue-600/20 transition hover:bg-primary-hover hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSubmitting ? "Creating account..." : "Create account"}
+                {!isSubmitting && <span aria-hidden="true">→</span>}
+              </button>
+            </form>
+          </>
+        )}
 
         <div className="mt-6 rounded-xl border border-border bg-slate-50 p-4">
           <p className="text-xs leading-5 text-muted">
-            <span className="font-semibold text-foreground">
-              Demo account.
-            </span>{" "}
-            This frontend demonstration stores account data in your
-            browser. No password or payment details are required.
+            <span className="font-semibold text-foreground">Demo account.</span>{" "}
+            Your account details are saved in this browser for this frontend demonstration.
           </p>
         </div>
 

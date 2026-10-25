@@ -1,5 +1,9 @@
 
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { getCurrentUser } from "@/lib/auth";
 
 const dashboardLinks = [
   {
@@ -17,6 +21,14 @@ const dashboardLinks = [
 ];
 
 export default function RenterDashboardPage() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+  const currentUser = getCurrentUser();
+  setUser(currentUser);
+  console.log("Signed-in renter:", currentUser);
+}, []);
+
   return (
     <section className="min-h-[70vh] bg-surface px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
@@ -24,9 +36,11 @@ export default function RenterDashboardPage() {
           <p className="text-sm font-semibold uppercase tracking-wider text-primary">
             Renter dashboard
           </p>
+
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Welcome to Sheggar Wheels
+           {user ? `Welcome, ${user.name}` : "Welcome to Sheggar Wheels"}
           </h1>
+
           <p className="mt-3 max-w-2xl text-base leading-7 text-muted">
             Manage your rental journey from one place. Explore available cars
             or check your bookings whenever you need to.
@@ -42,9 +56,11 @@ export default function RenterDashboardPage() {
               <h2 className="text-xl font-bold text-foreground">
                 {item.title}
               </h2>
+
               <p className="mt-3 leading-6 text-muted">
                 {item.description}
               </p>
+
               <Link
                 href={item.href}
                 className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-hover"

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -5,34 +6,25 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import {
+  signInUser,
   signInDemoUser,
   DEMO_LOGIN_CREDENTIALS,
 } from "@/lib/auth";
 
-const demoAccounts = [
+const accountTypes = [
   {
-    id: "renter-001",
+    role: "renter",
     label: "Renter",
-    email: "renter@sheggarwheels.demo",
     description: "Discover cars and manage your bookings.",
     destination: "/dashboard",
     initials: "R",
   },
   {
-    id: "owner-001",
+    role: "owner",
     label: "Car Owner",
-    email: "owner1@sheggarwheels.demo",
     description: "Manage your car listings and booking requests.",
     destination: "/owner",
     initials: "O",
-  },
-  {
-    id: "admin-001",
-    label: "Administrator",
-    email: "admin@sheggarwheels.demo",
-    description: "Explore the marketplace administration area.",
-    destination: "/admin",
-    initials: "A",
   },
 ];
 
@@ -61,21 +53,18 @@ function getSafeDestination(value, fallback) {
 export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isAdminLogin = searchParams.get("role") === "admin";
 
-  const [selectedAccount, setSelectedAccount] = useState("");
+  const [selectedRole, setSelectedRole] = useState("");
+  const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSigningIn, setIsSigningIn] = useState(false);
 
-  const selectedDemoAccount = demoAccounts.find(
-    (account) => account.id === selectedAccount,
-  );
-
-  const demoCredentials = DEMO_LOGIN_CREDENTIALS[selectedAccount];
-
-  function handleAccountChange(accountId) {
-    setSelectedAccount(accountId);
+  function handleRoleChange(role) {
+    setSelectedRole(role);
+    setEmail("");
     setUsername("");
     setPassword("");
     setError("");
@@ -86,11 +75,9 @@ export default function SignInPage() {
     setError("");
     setIsSigningIn(true);
 
-    const result = signInDemoUser(
-      selectedAccount,
-      username,
-      password,
-    );
+    const result = isAdminLogin
+      ? signInDemoUser("admin-001", username, password)
+      : signInUser(email, password, selectedRole);
 
     if (!result.success) {
       setError(result.message);
@@ -98,7 +85,11 @@ export default function SignInPage() {
       return;
     }
 
-    const fallback = selectedDemoAccount?.destination ?? "/dashboard";
+    const fallback = isAdminLogin
+      ? "/admin"
+      : accountTypes.find((account) => account.role === selectedRole)
+          ?.destination ?? "/dashboard";
+
     const destination = getSafeDestination(
       searchParams.get("next"),
       fallback,
@@ -107,6 +98,12 @@ export default function SignInPage() {
     router.replace(destination);
     router.refresh();
   }
+
+  const activeAccount = accountTypes.find(
+    (account) => account.role === selectedRole,
+  );
+
+  const adminCredentials = DEMO_LOGIN_CREDENTIALS["admin-001"];
 
   return (
     <section className="relative flex flex-1 items-center justify-center overflow-hidden bg-surface px-4 py-12 sm:px-6 sm:py-16">
@@ -137,241 +134,241 @@ export default function SignInPage() {
           </p>
 
           <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Find your way forward.
+            {isAdminLogin ? "Administrator login" : "Find your way forward."}
           </h1>
 
           <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-muted sm:text-base">
-            Choose your role to open the corresponding demo login form.
+            {isAdminLogin
+              ? "Sign in using the existing administrator demo credentials."
+              : "Choose your account type and sign in with your email and password."}
           </p>
         </div>
 
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-sm font-bold text-foreground">
-            Choose your account
-          </h2>
+        {isAdminLogin ? (
+          <div className="rounded-2xl border border-primary bg-blue-50/40 p-5">
+            <div className="mb-5">
+              <h2 className="text-lg font-bold text-foreground">
+                Administrator demo account
+              </h2>
+              <p className="mt-1 text-sm text-muted">
+                Admin access remains separate from public registration.
+              </p>
+            </div>
 
-          <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-primary">
-            Demo access
-          </span>
-        </div>
+            <form onSubmit={handleSignIn} className="space-y-4">
+              <div>
+                <label
+                  htmlFor="admin-username"
+                  className="mb-2 block text-sm font-semibold text-foreground"
+                >
+                  Username
+                </label>
+                <input
+                  id="admin-username"
+                  type="text"
+                  autoComplete="username"
+                  required
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  placeholder="Enter admin username"
+                  className="min-h-12 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
 
-        <div className="space-y-3">
-          {demoAccounts.map((account) => {
-            const isSelected = selectedAccount === account.id;
-            const credentials = DEMO_LOGIN_CREDENTIALS[account.id];
+              <div>
+                <label
+                  htmlFor="admin-password"
+                  className="mb-2 block text-sm font-semibold text-foreground"
+                >
+                  Password
+                </label>
+                <input
+                  id="admin-password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Enter admin password"
+                  className="min-h-12 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
 
-            return (
-              <div
-                key={account.id}
-                className={`rounded-2xl border transition duration-200 ${
-                  isSelected
-                    ? "border-primary bg-blue-50/40 shadow-sm ring-1 ring-primary"
-                    : "border-border bg-white hover:border-blue-300"
-                }`}
+              <div className="rounded-xl border border-blue-100 bg-white p-4 text-sm">
+                <p className="font-bold text-foreground">Demo credentials</p>
+                <p className="mt-2 text-muted">
+                  Username: <strong className="text-foreground">{adminCredentials.username}</strong>
+                </p>
+                <p className="mt-1 text-muted">
+                  Password: <strong className="text-foreground">{adminCredentials.password}</strong>
+                </p>
+              </div>
+
+              {error && (
+                <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  {error}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={isSigningIn}
+                className="flex min-h-12 w-full items-center justify-center rounded-xl bg-primary px-5 py-3 font-semibold text-white transition hover:bg-primary-hover disabled:opacity-60"
               >
-                <label className="flex min-h-24 cursor-pointer items-center gap-4 p-4 sm:p-5">
-                  <input
-                    type="radio"
-                    name="demoAccount"
-                    value={account.id}
-                    checked={isSelected}
-                    onChange={() => handleAccountChange(account.id)}
-                    className="sr-only"
-                  />
+                {isSigningIn ? "Signing in..." : "Sign in as Admin"}
+              </button>
+            </form>
+          </div>
+        ) : (
+          <>
+            <h2 className="mb-3 text-sm font-bold text-foreground">
+              Choose your account
+            </h2>
 
-                  <span
-                    aria-hidden="true"
-                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-lg font-bold ${
+            <div className="space-y-3">
+              {accountTypes.map((account) => {
+                const isSelected = selectedRole === account.role;
+
+                return (
+                  <div
+                    key={account.role}
+                    className={`rounded-2xl border transition duration-200 ${
                       isSelected
-                        ? "bg-primary text-white"
-                        : "bg-slate-100 text-slate-600"
+                        ? "border-primary bg-blue-50/40 shadow-sm ring-1 ring-primary"
+                        : "border-border bg-white hover:border-blue-300"
                     }`}
                   >
-                    {account.initials}
-                  </span>
+                    <label className="flex min-h-24 cursor-pointer items-center gap-4 p-4 sm:p-5">
+                      <input
+                        type="radio"
+                        name="accountType"
+                        value={account.role}
+                        checked={isSelected}
+                        onChange={() => handleRoleChange(account.role)}
+                        className="sr-only"
+                      />
 
-                  <span className="min-w-0 flex-1">
-                    <span className="flex flex-wrap items-center gap-2">
-                      <span className="font-bold text-foreground">
-                        {account.label}
+                      <span
+                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-lg font-bold ${
+                          isSelected
+                            ? "bg-primary text-white"
+                            : "bg-slate-100 text-slate-600"
+                        }`}
+                      >
+                        {account.initials}
                       </span>
 
-                      {account.id === "renter-001" && (
-                        <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
-                          Start here
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-bold text-foreground">
+                          {account.label}
                         </span>
-                      )}
-                    </span>
+                        <span className="mt-2 block text-sm leading-5 text-muted">
+                          {account.description}
+                        </span>
+                      </span>
 
-                    <span className="mt-1 block break-all text-xs text-muted sm:text-sm">
-                      {account.email}
-                    </span>
-
-                    <span className="mt-2 block text-sm leading-5 text-muted">
-                      {account.description}
-                    </span>
-                  </span>
-
-                  <span
-                    aria-hidden="true"
-                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-                      isSelected
-                        ? "border-primary bg-primary text-white"
-                        : "border-slate-300 bg-white"
-                    }`}
-                  >
-                    {isSelected && (
-                      <svg viewBox="0 0 20 20" fill="none" className="h-3.5 w-3.5">
-                        <path
-                          d="m5 10 3.2 3.2L15 6.5"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    )}
-                  </span>
-                </label>
-
-                {isSelected && (
-                  <div className="border-t border-blue-100 px-4 pb-5 pt-5 sm:px-5">
-                    <div className="mb-5">
-                      <h3 className="text-lg font-bold text-foreground">
-                        Sign in as {account.label}
-                      </h3>
-                      <p className="mt-1 text-sm text-muted">
-                        Enter your credentials to continue.
-                      </p>
-                    </div>
-
-                    <form onSubmit={handleSignIn} className="space-y-4">
-                      <div>
-                        <label
-                          htmlFor="username"
-                          className="mb-2 block text-sm font-semibold text-foreground"
-                        >
-                          Username
-                        </label>
-                        <input
-                          id="username"
-                          name="username"
-                          type="text"
-                          autoComplete="username"
-                          required
-                          value={username}
-                          onChange={(event) => setUsername(event.target.value)}
-                          placeholder="Enter your demo username"
-                          className="min-h-12 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-blue-100"
-                        />
-                      </div>
-
-                      <div>
-                        <label
-                          htmlFor="password"
-                          className="mb-2 block text-sm font-semibold text-foreground"
-                        >
-                          Password
-                        </label>
-                        <input
-                          id="password"
-                          name="password"
-                          type="password"
-                          autoComplete="current-password"
-                          required
-                          value={password}
-                          onChange={(event) => setPassword(event.target.value)}
-                          placeholder="Enter your demo password"
-                          className="min-h-12 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-blue-100"
-                        />
-                      </div>
-
-                      {credentials && (
-                        <div className="rounded-xl border border-blue-100 bg-white p-4">
-                          <p className="text-sm font-bold text-foreground">
-                            Demo credentials
-                          </p>
-                          <p className="mt-2 text-sm text-muted">
-                            Username:{" "}
-                            <span className="font-semibold text-foreground">
-                              {credentials.username}
-                            </span>
-                          </p>
-                          <p className="mt-1 text-sm text-muted">
-                            Password:{" "}
-                            <span className="font-semibold text-foreground">
-                              {credentials.password}
-                            </span>
-                          </p>
-                        </div>
-                      )}
-
-                      {error && (
-                        <p
-                          role="alert"
-                          className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
-                        >
-                          {error}
-                        </p>
-                      )}
-
-                      <button
-                        type="submit"
-                        disabled={isSigningIn}
-                        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 font-semibold text-white shadow-md shadow-blue-600/20 transition hover:bg-primary-hover hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
+                      <span
+                        aria-hidden="true"
+                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                          isSelected
+                            ? "border-primary bg-primary text-white"
+                            : "border-slate-300 bg-white"
+                        }`}
                       >
-                        {isSigningIn ? "Signing in..." : `Sign in as ${account.label}`}
-                        {!isSigningIn && (
-                          <span aria-hidden="true" className="text-lg">
-                            →
-                          </span>
-                        )}
-                      </button>
-                    </form>
+                        {isSelected && "✓"}
+                      </span>
+                    </label>
+
+                    {isSelected && (
+                      <div className="border-t border-blue-100 px-4 pb-5 pt-5 sm:px-5">
+                        <h3 className="text-lg font-bold text-foreground">
+                          Sign in as {account.label}
+                        </h3>
+                        <p className="mt-1 text-sm text-muted">
+                          Enter the email and password used to create your account.
+                        </p>
+
+                        <form onSubmit={handleSignIn} className="mt-5 space-y-4">
+                          <div>
+                            <label
+                              htmlFor="email"
+                              className="mb-2 block text-sm font-semibold text-foreground"
+                            >
+                              Email address
+                            </label>
+                            <input
+                              id="email"
+                              type="email"
+                              autoComplete="email"
+                              required
+                              value={email}
+                              onChange={(event) => setEmail(event.target.value)}
+                              placeholder="you@example.com"
+                              className="min-h-12 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-blue-100"
+                            />
+                          </div>
+
+                          <div>
+                            <label
+                              htmlFor="password"
+                              className="mb-2 block text-sm font-semibold text-foreground"
+                            >
+                              Password
+                            </label>
+                            <input
+                              id="password"
+                              type="password"
+                              autoComplete="current-password"
+                              required
+                              value={password}
+                              onChange={(event) => setPassword(event.target.value)}
+                              placeholder="Enter your password"
+                              className="min-h-12 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-blue-100"
+                            />
+                          </div>
+
+                          {error && (
+                            <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                              {error}
+                            </p>
+                          )}
+
+                          <button
+                            type="submit"
+                            disabled={isSigningIn}
+                            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 font-semibold text-white shadow-md shadow-blue-600/20 transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {isSigningIn ? "Signing in..." : `Sign in as ${account.label}`}
+                            {!isSigningIn && <span aria-hidden="true">→</span>}
+                          </button>
+                        </form>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                );
+              })}
+            </div>
+          </>
+        )}
 
-        <div className="mt-6 flex items-start gap-3 rounded-xl border border-border bg-slate-50 p-4">
-          <span aria-hidden="true" className="mt-0.5 text-primary">
-            <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
-              <path
-                d="M12 3 19 6v5c0 4.5-3 7.5-7 10-4-2.5-7-5.5-7-10V6l7-3Z"
-                stroke="currentColor"
-                strokeWidth="1.7"
-                strokeLinejoin="round"
-              />
-              <path
-                d="m9 12 2 2 4-4"
-                stroke="currentColor"
-                strokeWidth="1.7"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </span>
-
-          <p className="text-xs leading-5 text-muted">
-            <span className="font-semibold text-foreground">
-              Demo environment.
-            </span>{" "}
-            These credentials are for exploring the project only. This
-            frontend demo does not provide secure production authentication.
+    
+        {!isAdminLogin ? (
+          <p className="mt-6 text-center text-sm text-muted">
+            New to Sheggar Wheels?{" "}
+            <Link
+              href="/signup"
+              className="font-bold text-primary underline-offset-4 hover:underline"
+            >
+              Create an account
+            </Link>
           </p>
-        </div>
-
-        <p className="mt-6 text-center text-sm text-muted">
-          New to Sheggar Wheels?{" "}
-          <Link
-            href="/signup"
-            className="font-bold text-primary underline-offset-4 hover:underline"
-          >
-            Create an account
-          </Link>
-        </p>
+        ) : (
+          <p className="mt-6 text-center text-sm text-muted">
+            <Link href="/signin" className="font-bold text-primary hover:underline">
+              Back to renter and owner sign in
+            </Link>
+          </p>
+        )}
       </div>
     </section>
   );
