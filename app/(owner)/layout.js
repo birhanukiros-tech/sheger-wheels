@@ -1,9 +1,10 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, signOutDemoUser } from "@/lib/auth";
 
 const ownerLinks = [
   { label: "Dashboard", href: "/owner" },
@@ -18,6 +19,7 @@ export default function OwnerLayout({ children }) {
   const pathname = usePathname();
   const [user, setUser] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
     const currentUser = getCurrentUser();
@@ -30,18 +32,30 @@ export default function OwnerLayout({ children }) {
     }
 
     if (currentUser.role !== "owner") {
-      const destination =
-        currentUser.role === "admin"
-          ? "/admin"
-          : "/dashboard";
-
-      router.replace(destination);
+      router.replace(
+        currentUser.role === "admin" ? "/admin" : "/dashboard"
+      );
       return;
     }
 
     setUser(currentUser);
     setAuthChecked(true);
   }, [pathname, router]);
+
+  function handleSignOut() {
+    setSigningOut(true);
+
+    const signedOut = signOutDemoUser();
+
+    if (signedOut) {
+      router.replace("/");
+      router.refresh();
+      return;
+    }
+
+    setSigningOut(false);
+    window.alert("Unable to sign out. Please try again.");
+  }
 
   if (!authChecked) {
     return (
@@ -57,7 +71,7 @@ export default function OwnerLayout({ children }) {
     <div className="min-h-screen bg-slate-50">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 sm:px-6 lg:px-8">
-          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
             <div>
               <Link
                 href="/owner"
@@ -73,11 +87,29 @@ export default function OwnerLayout({ children }) {
               </p>
             </div>
 
-            <div className="text-sm text-slate-600">
-              Signed in as{" "}
-              <span className="font-semibold text-slate-900">
-                {user?.name || "Owner"}
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm text-slate-600">
+                Signed in as{" "}
+                <span className="font-semibold text-slate-900">
+                  {user?.name || "Owner"}
+                </span>
               </span>
+
+              <Link
+                href="/"
+                className="inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-500 hover:text-blue-700"
+              >
+                View public site
+              </Link>
+
+              <button
+                type="button"
+                onClick={handleSignOut}
+                disabled={signingOut}
+                className="inline-flex min-h-10 items-center justify-center rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {signingOut ? "Signing out..." : "Sign out"}
+              </button>
             </div>
           </div>
 

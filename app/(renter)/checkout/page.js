@@ -18,6 +18,30 @@ function getLocalDateString() {
   return `${year}-${month}-${day}`;
 }
 
+function getAllCars() {
+  try {
+    const savedCars = JSON.parse(
+      window.localStorage.getItem("sheggar-wheels-cars") || "[]"
+    );
+
+    const carMap = new Map();
+
+    cars.forEach((car) => {
+      carMap.set(String(car.id), car);
+    });
+
+    savedCars.forEach((car) => {
+      if (car?.id) {
+        carMap.set(String(car.id), car);
+      }
+    });
+
+    return Array.from(carMap.values());
+  } catch {
+    return cars;
+  }
+}
+
 const inputClass =
   "min-h-12 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 outline-none transition focus:border-[#0866F5] focus:ring-2 focus:ring-blue-100";
 
@@ -49,6 +73,9 @@ export default function CheckoutPage() {
   const [user, setUser] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
 
+  const [allCars, setAllCars] = useState(cars);
+  const [carsLoaded, setCarsLoaded] = useState(false);
+
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -63,9 +90,12 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const car = useMemo(
-    () => cars.find((item) => String(item.id) === String(carId)),
-    [carId]
+    () => allCars.find((item) => String(item.id) === String(carId)),
+    [allCars, carId]
   );
+
+  const isUnavailable =
+    car?.available === false || car?.isAvailable === false;
 
   useEffect(() => {
     const currentUser = getCurrentUser();
@@ -85,6 +115,23 @@ export default function CheckoutPage() {
     setAuthChecked(true);
   }, [carId, router]);
 
+  useEffect(() => {
+    setAllCars(getAllCars());
+    setCarsLoaded(true);
+
+    function refreshCars() {
+      setAllCars(getAllCars());
+    }
+
+    window.addEventListener("focus", refreshCars);
+    window.addEventListener("storage", refreshCars);
+
+    return () => {
+      window.removeEventListener("focus", refreshCars);
+      window.removeEventListener("storage", refreshCars);
+    };
+  }, []);
+
   const rentalDays = useMemo(() => {
     if (!startDate || !endDate) return 0;
 
@@ -98,7 +145,7 @@ export default function CheckoutPage() {
     return difference > 0 ? difference : 0;
   }, [startDate, endDate]);
 
-  const dailyPrice = Number(car?.dailyPrice ?? 0);
+  const dailyPrice = Number(car?.dailyPrice ?? car?.pricePerDay ?? 0);
   const totalPrice = dailyPrice * rentalDays;
 
   function handleSubmit(event) {
@@ -118,6 +165,13 @@ export default function CheckoutPage() {
 
     if (!car) {
       setError("We couldn't find this car. Please select another listing.");
+      return;
+    }
+
+    if (isUnavailable) {
+      setError(
+        "This car is currently unavailable. Please choose another listing."
+      );
       return;
     }
 
@@ -162,7 +216,14 @@ export default function CheckoutPage() {
     }
 
     if (!car.ownerId) {
-      setError("The car's owner information is missing. Please try another car.");
+      setError(
+        "The car's owner information is missing. Please try another car."
+      );
+      return;
+    }
+
+    if (!globalThis.crypto?.randomUUID) {
+      setError("Your browser cannot create a booking ID. Please try another browser.");
       return;
     }
 
@@ -208,7 +269,9 @@ export default function CheckoutPage() {
     const result = createBooking(booking);
 
     if (!result.success) {
-      setError(result.error || "Unable to create your booking. Please try again.");
+      setError(
+        result.error || "Unable to create your booking. Please try again."
+      );
       setIsSubmitting(false);
       return;
     }
@@ -216,10 +279,12 @@ export default function CheckoutPage() {
     router.push(`/bookings/${encodeURIComponent(bookingId)}`);
   }
 
-  if (!authChecked) {
+  if (!authChecked || !carsLoaded) {
     return (
       <main className="mx-auto max-w-5xl px-4 py-16">
-        <p className="text-center text-slate-500">Checking your account…</p>
+        <p className="text-center text-slate-500">
+          Checking your account and car…
+        </p>
       </main>
     );
   }
@@ -499,14 +564,16 @@ export default function CheckoutPage() {
 
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isUnavailable}
               className="mt-6 min-h-12 w-full rounded-lg bg-[#0866F5] px-5 py-3 font-semibold text-white transition hover:bg-[#0754C7] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting
-                ? "Processing booking…"
-                : paymentMethod === "pay_at_pickup"
-                  ? "Submit booking request →"
-                  : "Simulate payment & book →"}
+              {isUnavailable
+                ? "Car Currently Unavailable"
+                : isSubmitting
+                  ? "Processing booking…"
+                  : paymentMethod === "pay_at_pickup"
+                    ? "Submit booking request →"
+                    : "Simulate payment & book →"}
             </button>
 
             <p className="mt-3 text-xs leading-5 text-slate-500">

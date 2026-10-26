@@ -17,8 +17,28 @@ const statusStyles = {
   rejected: "bg-red-50 text-red-700 ring-red-200",
 };
 
-function getCar(carId) {
-  return cars.find((car) => String(car.id) === String(carId));
+function getAllCars() {
+  try {
+    const savedCars = JSON.parse(
+      window.localStorage.getItem("sheggar-wheels-cars") || "[]"
+    );
+
+    const carMap = new Map();
+
+    cars.forEach((car) => {
+      carMap.set(String(car.id), car);
+    });
+
+    savedCars.forEach((car) => {
+      if (car?.id) {
+        carMap.set(String(car.id), car);
+      }
+    });
+
+    return Array.from(carMap.values());
+  } catch {
+    return cars;
+  }
 }
 
 function DetailRow({ label, value }) {
@@ -39,8 +59,25 @@ export default function BookingDetailsPage() {
 
   const [booking, setBooking] = useState(null);
   const [user, setUser] = useState(null);
+  const [allCars, setAllCars] = useState(cars);
   const [authChecked, setAuthChecked] = useState(false);
   const [notFound, setNotFound] = useState(false);
+
+  useEffect(() => {
+    const loadCars = () => {
+      setAllCars(getAllCars());
+    };
+
+    loadCars();
+
+    window.addEventListener("focus", loadCars);
+    window.addEventListener("storage", loadCars);
+
+    return () => {
+      window.removeEventListener("focus", loadCars);
+      window.removeEventListener("storage", loadCars);
+    };
+  }, []);
 
   useEffect(() => {
     const currentUser = getCurrentUser();
@@ -103,10 +140,14 @@ export default function BookingDetailsPage() {
     );
   }
 
-  const car = getCar(booking.carId);
+  const car = allCars.find(
+    (item) => String(item.id) === String(booking.carId)
+  );
+
   const status = String(booking.status || "pending").toLowerCase();
   const canTrack = ["confirmed", "active"].includes(status);
   const canReview = status === "completed";
+
   const duration =
     Number(booking.totalDays) ||
     (booking.startDate && booking.endDate
@@ -240,10 +281,7 @@ export default function BookingDetailsPage() {
               </h2>
 
               <div className="mt-3">
-                <DetailRow
-                  label="Booking ID"
-                  value={booking.id}
-                />
+                <DetailRow label="Booking ID" value={booking.id} />
                 <DetailRow
                   label="Booking date"
                   value={formatDate(booking.createdAt)}

@@ -3,38 +3,115 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { notFound, useParams, useRouter } from "next/navigation";
+import { notFound, useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import cars from "@/data/cars.json";
 import { createCarSlug } from "@/lib/car-slug";
 import { getCurrentUser } from "@/lib/auth";
 
-function getCarBySlug(slug) {
-  return cars.find((car) => createCarSlug(car) === slug);
+function getCarPrice(car) {
+  return Number(car?.dailyPrice ?? car?.pricePerDay ?? 0);
+}
+
+function getCarHref(car) {
+  const slug = createCarSlug(car);
+
+  if (String(car.id).startsWith("owner-car-")) {
+    return `/cars/${slug}?carId=${encodeURIComponent(car.id)}`;
+  }
+
+  return `/cars/${slug}`;
+}
+
+function getAvailableCars() {
+  if (typeof window === "undefined") return cars;
+
+  try {
+    const savedCars = JSON.parse(
+      window.localStorage.getItem("sheggar-wheels-cars") || "[]"
+    );
+
+    const combinedCars = [...savedCars, ...cars];
+    const uniqueCars = new Map();
+
+    // Prefer the latest saved version of an owner-created listing.
+    combinedCars.forEach((car) => {
+      if (car?.id) {
+        if (!uniqueCars.has(car.id) || String(car.id).startsWith("owner-car-")) {
+          uniqueCars.set(car.id, car);
+        }
+      }
+    });
+
+    return Array.from(uniqueCars.values()).filter(
+      (car) => car.available !== false && car.isAvailable !== false
+    );
+  } catch {
+    return cars;
+  }
 }
 
 export default function CarDetailsPage() {
   const { slug } = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedCarId = searchParams.get("carId");
 
   const [user, setUser] = useState(undefined);
-
-  const car = getCarBySlug(slug);
+  const [allCars, setAllCars] = useState(cars);
+  const [carsLoaded, setCarsLoaded] = useState(false);
 
   useEffect(() => {
     setUser(getCurrentUser());
+    setAllCars(getAvailableCars());
+    setCarsLoaded(true);
+
+    function refreshCars() {
+      setAllCars(getAvailableCars());
+    }
+
+    window.addEventListener("focus", refreshCars);
+    window.addEventListener("storage", refreshCars);
+
+    return () => {
+      window.removeEventListener("focus", refreshCars);
+      window.removeEventListener("storage", refreshCars);
+    };
   }, []);
 
-  if (!car) notFound();
+  const car = requestedCarId
+    ? allCars.find((item) => String(item.id) === requestedCarId)
+    : allCars.find((item) => createCarSlug(item) === slug);
 
-  const otherCars = cars
+  if (carsLoaded && !car) {
+    notFound();
+  }
+
+  if (!car) {
+    return (
+      <section className="min-h-screen bg-[#F4F7FB] px-5 py-20">
+        <p className="text-center text-[#667085]">Loading car details...</p>
+      </section>
+    );
+  }
+
+  const otherCars = allCars
     .filter((item) => item.id !== car.id)
     .slice(0, 3);
 
+  const carHref = getCarHref(car);
+  const isUnavailable =
+    car.available === false || car.isAvailable === false;
+
   function handleBooking() {
+    if (isUnavailable) {
+      window.alert("This car is currently unavailable.");
+      return;
+    }
+
     if (!user) {
       router.push(
-        `/signin?next=${encodeURIComponent(`/cars/${slug}`)}`
+        `/signin?next=${encodeURIComponent(carHref)}`
       );
       return;
     }
@@ -81,14 +158,14 @@ export default function CarDetailsPage() {
               </h1>
 
               <p className="mt-5 text-2xl font-bold text-[#0866F5]">
-                ETB {Number(car.dailyPrice).toLocaleString("en-US")}
+                ETB {getCarPrice(car).toLocaleString("en-US")}
                 <span className="ml-2 text-sm font-normal text-[#667085]">
                   per day
                 </span>
               </p>
 
               <p className="mt-6 leading-7 text-[#667085]">
-                {car.description}
+                {car.description || "Contact the owner for more information about this car."}
               </p>
 
               <div className="mt-7 grid grid-cols-2 gap-3">
@@ -105,7 +182,7 @@ export default function CarDetailsPage() {
                   >
                     <p className="text-xs text-[#667085]">{label}</p>
                     <p className="mt-1 font-semibold text-[#252A34]">
-                      {value}
+                      {value || "Not specified"}
                     </p>
                   </div>
                 ))}
@@ -115,16 +192,18 @@ export default function CarDetailsPage() {
                 <button
                   type="button"
                   onClick={handleBooking}
-                  disabled={user === undefined}
-                  className="flex min-h-12 w-full items-center justify-center rounded-lg bg-[#0866F5] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#0754C7] disabled:cursor-wait disabled:opacity-60"
+                  disabled={user === undefined || isUnavailable}
+                  className="flex min-h-12 w-full items-center justify-center rounded-lg bg-[#0866F5] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#0754C7] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {user === undefined
-                    ? "Loading account..."
-                    : user?.role === "renter"
-                      ? "Book This Car"
-                      : user
-                        ? "Sign in as a Renter to Book"
-                        : "Sign in to Continue"}
+                  {isUnavailable
+                    ? "Currently Unavailable"
+                    : user === undefined
+                      ? "Loading account..."
+                      : user?.role === "renter"
+                        ? "Book This Car"
+                        : user
+                          ? "Sign in as a Renter to Book"
+                          : "Sign in to Continue"}
                 </button>
 
                 <p className="mt-3 text-center text-xs leading-5 text-[#667085]">
@@ -146,7 +225,7 @@ export default function CarDetailsPage() {
               {otherCars.map((otherCar) => (
                 <Link
                   key={otherCar.id}
-                  href={`/cars/${createCarSlug(otherCar)}`}
+                  href={getCarHref(otherCar)}
                   className="overflow-hidden rounded-2xl border border-[#E5EAF1] bg-white transition-shadow hover:shadow-lg"
                 >
                   <div className="h-48 overflow-hidden bg-[#F4F7FB]">
@@ -170,8 +249,7 @@ export default function CarDetailsPage() {
                     </h3>
 
                     <p className="mt-3 font-bold text-[#0866F5]">
-                      ETB{" "}
-                      {Number(otherCar.dailyPrice).toLocaleString("en-US")}
+                      ETB {getCarPrice(otherCar).toLocaleString("en-US")}
                       <span className="ml-1 text-sm font-normal text-[#667085]">
                         / day
                       </span>
