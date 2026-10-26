@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -40,6 +39,65 @@ function getAllCars() {
   } catch {
     return cars;
   }
+}
+
+function getBlockedDatesForCar(carId) {
+  try {
+    const savedAvailability = JSON.parse(
+      window.localStorage.getItem("sheggar-wheels-availability") || "{}"
+    );
+
+    const carAvailability = Array.isArray(savedAvailability)
+      ? savedAvailability.find(
+          (item) => String(item?.carId ?? item?.id) === String(carId)
+        )
+      : savedAvailability?.[String(carId)];
+
+    if (Array.isArray(carAvailability)) {
+      return carAvailability.map(String);
+    }
+
+    if (Array.isArray(carAvailability?.blockedDates)) {
+      return carAvailability.blockedDates.map(String);
+    }
+
+    if (Array.isArray(carAvailability?.unavailableDates)) {
+      return carAvailability.unavailableDates.map(String);
+    }
+
+    if (Array.isArray(carAvailability?.dates)) {
+      return carAvailability.dates
+        .filter((item) => item?.available === false || item?.blocked === true)
+        .map((item) => String(item.date));
+    }
+
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+function getBlockedDateInRange(startDate, endDate, blockedDates) {
+  if (!startDate || !endDate) return null;
+
+  const blockedDateSet = new Set(blockedDates);
+  const current = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+
+  while (current <= end) {
+    const year = current.getFullYear();
+    const month = String(current.getMonth() + 1).padStart(2, "0");
+    const day = String(current.getDate()).padStart(2, "0");
+    const dateString = `${year}-${month}-${day}`;
+
+    if (blockedDateSet.has(dateString)) {
+      return dateString;
+    }
+
+    current.setDate(current.getDate() + 1);
+  }
+
+  return null;
 }
 
 const inputClass =
@@ -97,6 +155,16 @@ export default function CheckoutPage() {
   const isUnavailable =
     car?.available === false || car?.isAvailable === false;
 
+  const blockedDates = useMemo(() => {
+    if (!carId || typeof window === "undefined") return [];
+    return getBlockedDatesForCar(carId);
+  }, [carId, carsLoaded]);
+
+  const blockedDateInRange = useMemo(
+    () => getBlockedDateInRange(startDate, endDate, blockedDates),
+    [startDate, endDate, blockedDates]
+  );
+
   useEffect(() => {
     const currentUser = getCurrentUser();
 
@@ -123,12 +191,19 @@ export default function CheckoutPage() {
       setAllCars(getAllCars());
     }
 
+    function refreshAvailability() {
+      setAllCars(getAllCars());
+      setCarsLoaded((loaded) => !loaded);
+    }
+
     window.addEventListener("focus", refreshCars);
     window.addEventListener("storage", refreshCars);
+    window.addEventListener("availabilityUpdated", refreshAvailability);
 
     return () => {
       window.removeEventListener("focus", refreshCars);
       window.removeEventListener("storage", refreshCars);
+      window.removeEventListener("availabilityUpdated", refreshAvailability);
     };
   }, []);
 
@@ -190,6 +265,21 @@ export default function CheckoutPage() {
       return;
     }
 
+    // Re-read availability immediately before submitting the booking.
+    const latestBlockedDates = getBlockedDatesForCar(car.id);
+    const conflictingDate = getBlockedDateInRange(
+      startDate,
+      endDate,
+      latestBlockedDates
+    );
+
+    if (conflictingDate) {
+      setError(
+        `This car is unavailable on ${conflictingDate}. Please choose different rental dates.`
+      );
+      return;
+    }
+
     const cleanName = fullName.trim();
     const cleanEmail = email.trim().toLowerCase();
     const cleanPhone = phone.trim();
@@ -223,7 +313,9 @@ export default function CheckoutPage() {
     }
 
     if (!globalThis.crypto?.randomUUID) {
-      setError("Your browser cannot create a booking ID. Please try another browser.");
+      setError(
+        "Your browser cannot create a booking ID. Please try another browser."
+      );
       return;
     }
 
@@ -468,6 +560,7 @@ export default function CheckoutPage() {
                       if (endDate && event.target.value >= endDate) {
                         setEndDate("");
                       }
+                      setError("");
                     }}
                     required
                     className={inputClass}
@@ -483,12 +576,25 @@ export default function CheckoutPage() {
                     type="date"
                     min={startDate || getLocalDateString()}
                     value={endDate}
-                    onChange={(event) => setEndDate(event.target.value)}
+                    onChange={(event) => {
+                      setEndDate(event.target.value);
+                      setError("");
+                    }}
                     required
                     className={inputClass}
                   />
                 </div>
               </div>
+
+              {blockedDateInRange && (
+                <p
+                  role="status"
+                  className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800"
+                >
+                  This date range includes a date the owner has blocked (
+                  {blockedDateInRange}). Please select different dates.
+                </p>
+              )}
             </div>
 
             <div className="mt-8 border-t border-slate-200 pt-7">
@@ -564,16 +670,20 @@ export default function CheckoutPage() {
 
             <button
               type="submit"
-              disabled={isSubmitting || isUnavailable}
+              disabled={
+                isSubmitting || isUnavailable || Boolean(blockedDateInRange)
+              }
               className="mt-6 min-h-12 w-full rounded-lg bg-[#0866F5] px-5 py-3 font-semibold text-white transition hover:bg-[#0754C7] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isUnavailable
                 ? "Car Currently Unavailable"
-                : isSubmitting
-                  ? "Processing booking…"
-                  : paymentMethod === "pay_at_pickup"
-                    ? "Submit booking request →"
-                    : "Simulate payment & book →"}
+                : blockedDateInRange
+                  ? "Choose Available Dates"
+                  : isSubmitting
+                    ? "Processing booking…"
+                    : paymentMethod === "pay_at_pickup"
+                      ? "Submit booking request →"
+                      : "Simulate payment & book →"}
             </button>
 
             <p className="mt-3 text-xs leading-5 text-slate-500">
