@@ -30,6 +30,15 @@ function readStoredCars() {
   return Array.isArray(stored) ? stored : [];
 }
 
+function ownsCar(car, owner) {
+  return (
+    String(car.ownerId ?? "") === String(owner.id ?? "") ||
+    (Boolean(car.ownerEmail) &&
+      String(car.ownerEmail).toLowerCase() ===
+        String(owner.email || "").toLowerCase())
+  );
+}
+
 export default function EditCarPage() {
   const params = useParams();
   const router = useRouter();
@@ -53,15 +62,18 @@ export default function EditCarPage() {
 
     try {
       const storedCars = readStoredCars();
-      const car = storedCars.find((item) => String(item.id) === String(carId));
+      const storedCar = storedCars.find(
+        (item) => String(item.id) === String(carId)
+      );
 
-      // This page edits owner-created listings, not the shared sample catalog.
-      if (
-        !car ||
-        (String(car.ownerId) !== String(owner.id) &&
-          String(car.ownerEmail || "").toLowerCase() !==
-            String(owner.email || "").toLowerCase())
-      ) {
+      const demoCar = carsData.find(
+        (item) => String(item.id) === String(carId)
+      );
+
+      // Prefer saved edits, otherwise use the original demo car.
+      const car = storedCar || demoCar;
+
+      if (!car || !ownsCar(car, owner)) {
         setError("We couldn't find this vehicle in your owner listings.");
         setLoading(false);
         return;
@@ -131,11 +143,11 @@ export default function EditCarPage() {
     if (form.image.trim()) {
       try {
         const imageUrl = new URL(form.image.trim());
+
         if (!["http:", "https:"].includes(imageUrl.protocol)) {
           throw new Error("Invalid image URL");
         }
       } catch {
-        // Also allow a local public-folder path, such as /images/cars/car.jpg.
         if (!form.image.trim().startsWith("/")) {
           setError("Enter a valid image URL or a local path starting with /.");
           return;
@@ -147,25 +159,25 @@ export default function EditCarPage() {
 
     try {
       const storedCars = readStoredCars();
-      const index = storedCars.findIndex(
+      const storedIndex = storedCars.findIndex(
         (item) => String(item.id) === String(carId)
       );
 
-      if (index === -1) {
-        throw new Error("Vehicle not found");
-      }
+      const storedCar =
+        storedIndex !== -1 ? storedCars[storedIndex] : null;
 
-      const existingCar = storedCars[index];
+      const demoCar = carsData.find(
+        (item) => String(item.id) === String(carId)
+      );
 
-      if (
-        String(existingCar.ownerId) !== String(owner.id) &&
-        String(existingCar.ownerEmail || "").toLowerCase() !==
-          String(owner.email || "").toLowerCase()
-      ) {
+      // A saved car takes precedence over its original demo version.
+      const existingCar = storedCar || demoCar;
+
+      if (!existingCar || !ownsCar(existingCar, owner)) {
         throw new Error("You cannot edit this vehicle");
       }
 
-      storedCars[index] = {
+      const updatedCar = {
         ...existingCar,
         make: form.make.trim(),
         model: form.model.trim(),
@@ -180,7 +192,16 @@ export default function EditCarPage() {
         updatedAt: new Date().toISOString(),
       };
 
+      if (storedIndex !== -1) {
+        // Update the existing saved listing or override.
+        storedCars[storedIndex] = updatedCar;
+      } else {
+        // Save a local override for a static demo car.
+        storedCars.push(updatedCar);
+      }
+
       localStorage.setItem(STORAGE_KEY, JSON.stringify(storedCars));
+
       router.push("/owner/cars");
       router.refresh();
     } catch {
