@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -11,6 +10,7 @@ const navigation = [
   { label: "Home", href: "/" },
   { label: "Browse Cars", href: "/cars" },
   { label: "Checkout", href: "/checkout" },
+  { label: "Admin", href: "/admin/signin" },
 ];
 
 const dashboardRoutes = {
@@ -74,6 +74,7 @@ export default function Header() {
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={active ? "page" : undefined}
                 className={`transition-colors hover:text-[#0866F5] ${
                   active ? "text-[#0866F5]" : "text-slate-600"
                 }`}
@@ -119,6 +120,7 @@ export default function Header() {
               >
                 Sign In
               </Link>
+
               <Link
                 href="/signup"
                 className="rounded-lg bg-[#0866F5] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0754C7]"
