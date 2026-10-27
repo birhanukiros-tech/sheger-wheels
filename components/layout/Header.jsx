@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -10,7 +11,6 @@ const navigation = [
   { label: "Home", href: "/" },
   { label: "Browse Cars", href: "/cars" },
   { label: "Checkout", href: "/checkout" },
-  { label: "Admin", href: "/admin/signin" },
 ];
 
 const dashboardRoutes = {
@@ -38,9 +38,17 @@ export default function Header() {
   function handleSignOut() {
     signOutDemoUser();
     setUser(null);
-    router.push("/");
+    router.replace("/");
     router.refresh();
   }
+
+  const adminHref =
+    user?.role === "admin" ? "/admin" : "/admin/signin";
+
+  const navigationItems = [
+    ...navigation,
+    { label: "Admin", href: adminHref },
+  ];
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
@@ -63,7 +71,7 @@ export default function Header() {
           aria-label="Main navigation"
           className="order-3 flex w-full flex-wrap items-center gap-x-5 gap-y-3 text-sm font-semibold sm:order-none sm:w-auto"
         >
-          {navigation.map((item) => {
+          {navigationItems.map((item) => {
             const active =
               item.href === "/"
                 ? pathname === "/"
@@ -72,7 +80,7 @@ export default function Header() {
 
             return (
               <Link
-                key={item.href}
+                key={item.label}
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={`transition-colors hover:text-[#0866F5] ${
