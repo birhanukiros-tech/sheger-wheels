@@ -440,7 +440,7 @@ export default function AdminBookingsPage() {
 
                       <td className="px-5 py-4 text-right">
                         <Link
-                          href={`/bookings/${encodeURIComponent(booking.id)}`}
+                         href={`/admin/bookings/${encodeURIComponent(booking.id)}`}
                           aria-label={`View booking ${booking.id}`}
                           className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-[#0866F5] transition hover:border-blue-200 hover:bg-blue-50"
                         >
@@ -551,7 +551,7 @@ export default function AdminBookingsPage() {
                     </div>
 
                     <Link
-                      href={`/bookings/${encodeURIComponent(booking.id)}`}
+                      href={`/admin/bookings/${encodeURIComponent(booking.id)}`}
                       className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg bg-[#0866F5] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#0754C7]"
                     >
                       <Eye size={16} />
