@@ -4,6 +4,23 @@ import Link from "next/link";
 import cars from "@/data/cars.json";
 import { createCarSlug } from "@/lib/car-slug";
 
+
+export const metadata = {
+  title: "Find Cars for Rent in Addis Ababa",
+  description:
+    "Explore Sheggar Wheels and discover cars available for rent in Addis Ababa, Ethiopia. Compare demo vehicles, explore prices, and find a ride for your next journey.",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "Find Cars for Rent in Addis Ababa | Sheggar Wheels",
+    description:
+      "Explore available demo cars, compare prices, and discover your next ride in Addis Ababa.",
+    url: "/",
+    type: "website",
+  },
+};
+
 export default function Home() {
   const featuredCars = cars.slice(0, 4);
 

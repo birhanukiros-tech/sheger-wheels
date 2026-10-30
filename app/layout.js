@@ -1,4 +1,3 @@
-
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -13,12 +12,38 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
+  metadataBase: new URL("http://localhost:3000"),
+
   title: {
     default: "Sheggar Wheels | Find Your Next Ride",
     template: "%s | Sheggar Wheels",
   },
+
   description:
-    "Discover and book cars for your next journey with Sheggar Wheels, a demo car-rental marketplace for Addis Ababa.",
+    "Discover and book cars for your next journey with Sheggar Wheels, a demo peer-to-peer car rental marketplace for Addis Ababa, Ethiopia.",
+
+  applicationName: "Sheggar Wheels",
+
+  openGraph: {
+    title: "Sheggar Wheels | Find Your Next Ride",
+    description:
+      "Discover cars available for rent in Addis Ababa with Sheggar Wheels.",
+    siteName: "Sheggar Wheels",
+    locale: "en_ET",
+    type: "website",
+  },
+
+  twitter: {
+    card: "summary_large_image",
+    title: "Sheggar Wheels | Find Your Next Ride",
+    description:
+      "Discover cars available for rent in Addis Ababa with Sheggar Wheels.",
+  },
+
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({ children }) {
