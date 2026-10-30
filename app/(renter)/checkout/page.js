@@ -1,14 +1,25 @@
 
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import cars from "@/data/cars.json";
 import { getCurrentUser } from "@/lib/auth";
 import { createBooking } from "@/lib/bookings";
 import { formatCurrency } from "@/lib/format";
+
+const BookingLocationMap = dynamic(
+  () => import("@/components/maps/BookingLocationMap"),
+  { ssr: false }
+);
+
+const defaultLocations = {
+  pickup: [9.0222, 38.7468],
+  dropoff: [9.0355, 38.7524],
+};
 
 function getLocalDateString() {
   const now = new Date();
@@ -146,8 +157,14 @@ export default function CheckoutPage() {
   const [endDate, setEndDate] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("demo_card");
 
+  const [locations, setLocations] = useState(defaultLocations);
+
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleLocationsChange = useCallback((nextLocations) => {
+    setLocations(nextLocations);
+  }, []);
 
   const car = useMemo(
     () => allCars.find((item) => String(item.id) === String(carId)),
@@ -362,6 +379,15 @@ export default function CheckoutPage() {
       dailyPrice,
       totalDays: rentalDays,
       totalPrice,
+
+      pickupLocation: {
+        latitude: locations.pickup[0],
+        longitude: locations.pickup[1],
+      },
+      dropoffLocation: {
+        latitude: locations.dropoff[0],
+        longitude: locations.dropoff[1],
+      },
 
       contact: {
         fullName: cleanName,
@@ -625,6 +651,8 @@ export default function CheckoutPage() {
                 </p>
               )}
             </div>
+
+            <BookingLocationMap onLocationsChange={handleLocationsChange} />
 
             <div className="mt-8 border-t border-slate-200 pt-7">
               <h2 className="text-xl font-bold text-slate-900">
