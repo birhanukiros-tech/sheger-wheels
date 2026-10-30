@@ -69,54 +69,69 @@ export default function AdminBookingDetailsPage() {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
+    let cancelled = false;
 
-    if (!currentUser || currentUser.role !== "admin") {
-      router.replace(
-        `/signin?role=admin&next=${encodeURIComponent(
-          `/admin/bookings/${bookingId}`
-        )}`
+    const loadBooking = () => {
+      const currentUser = getCurrentUser();
+
+      if (!currentUser || currentUser.role !== "admin") {
+        router.replace(
+          `/signin?role=admin&next=${encodeURIComponent(
+            `/admin/bookings/${bookingId}`
+          )}`
+        );
+        return;
+      }
+
+      const savedBooking = getBookingById(bookingId);
+
+      if (!savedBooking) {
+        if (!cancelled) {
+          setNotFound(true);
+          setLoading(false);
+        }
+        return;
+      }
+
+      const users = readStoredData(STORAGE_KEYS.users, []);
+      const savedCars = readStoredData("sheggar-wheels-cars", []);
+
+      const allCars = [
+        ...(Array.isArray(carsData) ? carsData : []),
+        ...(Array.isArray(savedCars) ? savedCars : []),
+      ];
+
+      const selectedCar = allCars.find(
+        (item) =>
+          String(item.id) === String(savedBooking.carId) ||
+          String(item.slug) === String(savedBooking.carId)
       );
-      return;
-    }
 
-    const savedBooking = getBookingById(bookingId);
+      const selectedRenter = users.find(
+        (user) =>
+          String(user.id) === String(savedBooking.renterId) ||
+          String(user.id) === String(savedBooking.userId)
+      );
 
-    if (!savedBooking) {
-      setNotFound(true);
-      setLoading(false);
-      return;
-    }
+      const selectedOwner = users.find(
+        (user) => String(user.id) === String(savedBooking.ownerId)
+      );
 
-    const users = readStoredData(STORAGE_KEYS.users, []);
-    const savedCars = readStoredData("sheggar-wheels-cars", []);
+      if (!cancelled) {
+        setBooking(savedBooking);
+        setCar(selectedCar || null);
+        setRenter(selectedRenter || null);
+        setOwner(selectedOwner || null);
+        setLoading(false);
+      }
+    };
 
-    const allCars = [
-      ...(Array.isArray(carsData) ? carsData : []),
-      ...(Array.isArray(savedCars) ? savedCars : []),
-    ];
+    const timer = window.setTimeout(loadBooking, 0);
 
-    const selectedCar = allCars.find(
-      (item) =>
-        String(item.id) === String(savedBooking.carId) ||
-        String(item.slug) === String(savedBooking.carId)
-    );
-
-    const selectedRenter = users.find(
-      (user) =>
-        String(user.id) === String(savedBooking.renterId) ||
-        String(user.id) === String(savedBooking.userId)
-    );
-
-    const selectedOwner = users.find(
-      (user) => String(user.id) === String(savedBooking.ownerId)
-    );
-
-    setBooking(savedBooking);
-    setCar(selectedCar || null);
-    setRenter(selectedRenter || null);
-    setOwner(selectedOwner || null);
-    setLoading(false);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [bookingId, router]);
 
   if (loading) {
@@ -129,7 +144,7 @@ export default function AdminBookingDetailsPage() {
     );
   }
 
-  if (notFound) {
+  if (notFound || !booking) {
     return (
       <main className="min-h-screen bg-[#F4F7FB] p-6">
         <div className="mx-auto max-w-3xl rounded-xl bg-white p-8 shadow-sm">

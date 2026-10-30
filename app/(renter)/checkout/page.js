@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -133,6 +134,7 @@ export default function CheckoutPage() {
 
   const [allCars, setAllCars] = useState(cars);
   const [carsLoaded, setCarsLoaded] = useState(false);
+  const [blockedDates, setBlockedDates] = useState([]);
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -155,57 +157,85 @@ export default function CheckoutPage() {
   const isUnavailable =
     car?.available === false || car?.isAvailable === false;
 
-  const blockedDates = useMemo(() => {
-    if (!carId || typeof window === "undefined") return [];
-    return getBlockedDatesForCar(carId);
-  }, [carId, carsLoaded]);
-
   const blockedDateInRange = useMemo(
     () => getBlockedDateInRange(startDate, endDate, blockedDates),
     [startDate, endDate, blockedDates]
   );
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
+    let cancelled = false;
 
-    if (!currentUser || currentUser.role !== "renter") {
-      router.replace(
-        `/signin?next=${encodeURIComponent(
-          `/checkout?carId=${carId ?? ""}`
-        )}`
-      );
-      return;
-    }
+    const timeoutId = window.setTimeout(() => {
+      const currentUser = getCurrentUser();
 
-    setUser(currentUser);
-    setFullName(currentUser.name ?? "");
-    setEmail(currentUser.email ?? "");
-    setAuthChecked(true);
+      if (!currentUser || currentUser.role !== "renter") {
+        router.replace(
+          `/signin?next=${encodeURIComponent(
+            `/checkout?carId=${carId ?? ""}`
+          )}`
+        );
+        return;
+      }
+
+      if (cancelled) return;
+
+      setUser(currentUser);
+      setFullName(currentUser.name ?? "");
+      setEmail(currentUser.email ?? "");
+      setAuthChecked(true);
+    }, 0);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
   }, [carId, router]);
 
   useEffect(() => {
-    setAllCars(getAllCars());
-    setCarsLoaded(true);
+    let cancelled = false;
+    let cleanupListeners = () => {};
 
-    function refreshCars() {
+    const timeoutId = window.setTimeout(() => {
+      if (cancelled) return;
+
       setAllCars(getAllCars());
-    }
+      setBlockedDates(getBlockedDatesForCar(carId));
+      setCarsLoaded(true);
 
-    function refreshAvailability() {
-      setAllCars(getAllCars());
-      setCarsLoaded((loaded) => !loaded);
-    }
+      function refreshCars() {
+        if (cancelled) return;
 
-    window.addEventListener("focus", refreshCars);
-    window.addEventListener("storage", refreshCars);
-    window.addEventListener("availabilityUpdated", refreshAvailability);
+        setAllCars(getAllCars());
+        setBlockedDates(getBlockedDatesForCar(carId));
+      }
+
+      function refreshAvailability() {
+        if (cancelled) return;
+
+        setAllCars(getAllCars());
+        setBlockedDates(getBlockedDatesForCar(carId));
+      }
+
+      window.addEventListener("focus", refreshCars);
+      window.addEventListener("storage", refreshCars);
+      window.addEventListener("availabilityUpdated", refreshAvailability);
+
+      cleanupListeners = () => {
+        window.removeEventListener("focus", refreshCars);
+        window.removeEventListener("storage", refreshCars);
+        window.removeEventListener(
+          "availabilityUpdated",
+          refreshAvailability
+        );
+      };
+    }, 0);
 
     return () => {
-      window.removeEventListener("focus", refreshCars);
-      window.removeEventListener("storage", refreshCars);
-      window.removeEventListener("availabilityUpdated", refreshAvailability);
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+      cleanupListeners();
     };
-  }, []);
+  }, [carId]);
 
   const rentalDays = useMemo(() => {
     if (!startDate || !endDate) return 0;
@@ -265,7 +295,6 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Re-read availability immediately before submitting the booking.
     const latestBlockedDates = getBlockedDatesForCar(car.id);
     const conflictingDate = getBlockedDateInRange(
       startDate,
@@ -515,7 +544,7 @@ export default function CheckoutPage() {
                   >
                     <option value="national_id">National ID</option>
                     <option value="passport">Passport</option>
-                    <option value="drivers_license">Driver's licence</option>
+                    <option value="drivers_license">Driver&apos;s licence</option>
                     <option value="other">Other ID</option>
                   </select>
                 </div>

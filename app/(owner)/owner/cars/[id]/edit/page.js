@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -51,52 +52,62 @@ export default function EditCarPage() {
   const [carName, setCarName] = useState("Vehicle");
 
   useEffect(() => {
-    const owner = getCurrentUser();
+    let cancelled = false;
 
-    if (!owner || owner.role !== "owner") {
-      router.replace(
-        `/signin?next=${encodeURIComponent(`/owner/cars/${carId}/edit`)}`
-      );
-      return;
-    }
+    Promise.resolve().then(() => {
+      if (cancelled) return;
 
-    try {
-      const storedCars = readStoredCars();
-      const storedCar = storedCars.find(
-        (item) => String(item.id) === String(carId)
-      );
+      const owner = getCurrentUser();
 
-      const demoCar = carsData.find(
-        (item) => String(item.id) === String(carId)
-      );
-
-      // Prefer saved edits, otherwise use the original demo car.
-      const car = storedCar || demoCar;
-
-      if (!car || !ownsCar(car, owner)) {
-        setError("We couldn't find this vehicle in your owner listings.");
-        setLoading(false);
+      if (!owner || owner.role !== "owner") {
+        router.replace(
+          `/signin?next=${encodeURIComponent(`/owner/cars/${carId}/edit`)}`
+        );
         return;
       }
 
-      setCarName(getCarName(car));
-      setForm({
-        make: car.make || "",
-        model: car.model || "",
-        year: String(car.year || ""),
-        color: car.color || "",
-        transmission: car.transmission || "automatic",
-        seats: String(car.seats || 5),
-        dailyPrice: String(car.dailyPrice ?? car.pricePerDay ?? ""),
-        location: car.location || "",
-        image: car.image || "",
-        description: car.description || "",
-      });
-    } catch {
-      setError("We couldn't read your saved vehicle details.");
-    }
+      try {
+        const storedCars = readStoredCars();
+        const storedCar = storedCars.find(
+          (item) => String(item.id) === String(carId)
+        );
 
-    setLoading(false);
+        const demoCar = carsData.find(
+          (item) => String(item.id) === String(carId)
+        );
+
+        // Prefer saved edits, otherwise use the original demo car.
+        const car = storedCar || demoCar;
+
+        if (!car || !ownsCar(car, owner)) {
+          setError("We couldn't find this vehicle in your owner listings.");
+          setLoading(false);
+          return;
+        }
+
+        setCarName(getCarName(car));
+        setForm({
+          make: car.make || "",
+          model: car.model || "",
+          year: String(car.year || ""),
+          color: car.color || "",
+          transmission: car.transmission || "automatic",
+          seats: String(car.seats || 5),
+          dailyPrice: String(car.dailyPrice ?? car.pricePerDay ?? ""),
+          location: car.location || "",
+          image: car.image || "",
+          description: car.description || "",
+        });
+      } catch {
+        setError("We couldn't read your saved vehicle details.");
+      }
+
+      setLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [carId, router]);
 
   function handleChange(event) {
@@ -193,10 +204,8 @@ export default function EditCarPage() {
       };
 
       if (storedIndex !== -1) {
-        // Update the existing saved listing or override.
         storedCars[storedIndex] = updatedCar;
       } else {
-        // Save a local override for a static demo car.
         storedCars.push(updatedCar);
       }
 

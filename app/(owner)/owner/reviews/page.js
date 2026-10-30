@@ -132,25 +132,37 @@ export default function OwnerReviewsPage() {
   }, []);
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
-
-    if (!currentUser || currentUser.role !== "owner") {
-      router.replace("/signin");
-      return;
-    }
-
-    setUser(currentUser);
-    loadReviews(currentUser.id);
-    setLoading(false);
+    let cancelled = false;
+    let currentUser = null;
 
     function refreshFromStorage() {
-      loadReviews(currentUser.id);
+      if (!cancelled && currentUser) {
+        loadReviews(currentUser.id);
+      }
     }
 
-    window.addEventListener("focus", refreshFromStorage);
-    window.addEventListener("storage", refreshFromStorage);
+    function initializeReviews() {
+      if (cancelled) return;
+
+      currentUser = getCurrentUser();
+
+      if (!currentUser || currentUser.role !== "owner") {
+        router.replace("/signin");
+        return;
+      }
+
+      setUser(currentUser);
+      loadReviews(currentUser.id);
+      setLoading(false);
+
+      window.addEventListener("focus", refreshFromStorage);
+      window.addEventListener("storage", refreshFromStorage);
+    }
+
+    Promise.resolve().then(initializeReviews);
 
     return () => {
+      cancelled = true;
       window.removeEventListener("focus", refreshFromStorage);
       window.removeEventListener("storage", refreshFromStorage);
     };

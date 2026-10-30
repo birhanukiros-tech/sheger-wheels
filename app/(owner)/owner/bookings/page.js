@@ -208,7 +208,10 @@ export default function OwnerBookingsPage() {
       }
     }
 
-    const combined = [...(Array.isArray(cars) ? cars : []), ...(Array.isArray(storedCars) ? storedCars : [])];
+    const combined = [
+      ...(Array.isArray(cars) ? cars : []),
+      ...(Array.isArray(storedCars) ? storedCars : []),
+    ];
 
     return combined.filter(
       (car, index, list) =>
@@ -235,15 +238,25 @@ export default function OwnerBookingsPage() {
   }, []);
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
+    let cancelled = false;
 
-    if (!currentUser) {
-      setLoading(false);
-      return;
-    }
+    Promise.resolve().then(() => {
+      if (cancelled) return;
 
-    setUser(currentUser);
-    refreshData(currentUser.id);
+      const currentUser = getCurrentUser();
+
+      if (!currentUser) {
+        setLoading(false);
+        return;
+      }
+
+      setUser(currentUser);
+      refreshData(currentUser.id);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [refreshData]);
 
   const visibleBookings = useMemo(() => {

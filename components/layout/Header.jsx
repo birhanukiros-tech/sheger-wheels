@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -32,7 +31,18 @@ export default function Header() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    setUser(getCurrentUser());
+    let cancelled = false;
+
+    const updateUser = () => {
+      if (cancelled) return;
+      setUser(getCurrentUser());
+    };
+
+    Promise.resolve().then(updateUser);
+
+    return () => {
+      cancelled = true;
+    };
   }, [pathname]);
 
   function handleSignOut() {

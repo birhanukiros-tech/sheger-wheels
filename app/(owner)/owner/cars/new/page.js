@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -388,7 +389,7 @@ export default function AddCarPage() {
         </form>
 
         <p className="mt-5 text-xs leading-5 text-slate-500">
-          Demo notice: listings are saved in this browser's local storage.
+          Demo notice: listings are saved in this browser&apos;s local storage.
           This does not publish a real rental listing or process a payment.
         </p>
       </div>

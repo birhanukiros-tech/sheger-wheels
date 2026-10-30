@@ -1,6 +1,8 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
@@ -49,33 +51,54 @@ export default function TrackBookingPage() {
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    const user = getCurrentUser();
+    let cancelled = false;
 
-    if (!user || user.role !== "renter") {
-      router.replace(
-        `/signin?next=${encodeURIComponent(`/bookings/${id}/track`)}`
-      );
-      return;
-    }
+    const initializeTracking = () => {
+      if (cancelled) return;
 
-    const currentBooking = getBookingById(String(id));
+      const user = getCurrentUser();
 
-    if (!currentBooking || currentBooking.renterId !== user.id) {
+      if (!user || user.role !== "renter") {
+        router.replace(
+          `/signin?next=${encodeURIComponent(`/bookings/${id}/track`)}`
+        );
+        return;
+      }
+
+      const currentBooking = getBookingById(String(id));
+
+      if (!currentBooking || currentBooking.renterId !== user.id) {
+        if (!cancelled) {
+          setAuthChecked(true);
+        }
+        return;
+      }
+
+      const currentCar =
+        cars.find(
+          (item) => String(item.id) === String(currentBooking.carId)
+        ) ?? null;
+
+      if (cancelled) return;
+
+      setBooking(currentBooking);
+      setCar(currentCar);
       setAuthChecked(true);
-      return;
-    }
+    };
 
-    setBooking(currentBooking);
-    setCar(
-      cars.find((item) => String(item.id) === String(currentBooking.carId)) ?? null
-    );
-    setAuthChecked(true);
+    Promise.resolve().then(initializeTracking);
+
+    return () => {
+      cancelled = true;
+    };
   }, [id, router]);
 
   if (!authChecked) {
     return (
       <main className="mx-auto max-w-5xl px-4 py-16">
-        <p className="text-center text-slate-500">Loading rental tracking…</p>
+        <p className="text-center text-slate-500">
+          Loading rental tracking…
+        </p>
       </main>
     );
   }
@@ -88,7 +111,7 @@ export default function TrackBookingPage() {
             Booking not found
           </h1>
           <p className="mt-3 text-slate-600">
-            We couldn't find this booking under your account.
+            We couldn&apos;t find this booking under your account.
           </p>
           <Link
             href="/bookings"
@@ -102,7 +125,9 @@ export default function TrackBookingPage() {
   }
 
   const status = booking.status.toLowerCase();
-  const currentStage = stages.findIndex((stage) => stage.status === status);
+  const currentStage = stages.findIndex(
+    (stage) => stage.status === status
+  );
   const isStopped = status === "cancelled" || status === "rejected";
 
   return (
@@ -129,22 +154,31 @@ export default function TrackBookingPage() {
 
         <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:p-8">
-            <div className="flex h-36 w-full items-center justify-center overflow-hidden rounded-xl bg-slate-100 sm:w-48 sm:shrink-0">
+            <div className="relative flex h-36 w-full shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100 sm:w-48">
               {car?.image ? (
-                <img
+                <Image
                   src={car.image}
-                  alt={car ? `${car.year} ${car.make} ${car.model}` : "Rental car"}
-                  className="h-full w-full object-cover"
+                  alt={`${car.year} ${car.make} ${car.model}`}
+                  fill
+                  sizes="(max-width: 640px) 100vw, 192px"
+                  className="object-cover"
+                  unoptimized
                 />
               ) : (
-                <span className="text-sm text-slate-400">Car image unavailable</span>
+                <span className="text-sm text-slate-400">
+                  Car image unavailable
+                </span>
               )}
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="text-sm text-slate-500">Your selected vehicle</p>
+              <p className="text-sm text-slate-500">
+                Your selected vehicle
+              </p>
               <h2 className="mt-1 text-2xl font-bold text-slate-900">
-                {car ? `${car.year} ${car.make} ${car.model}` : "Rental vehicle"}
+                {car
+                  ? `${car.year} ${car.make} ${car.model}`
+                  : "Rental vehicle"}
               </h2>
               <p className="mt-2 break-all text-xs text-slate-400">
                 Booking ID: {booking.id}
@@ -167,7 +201,9 @@ export default function TrackBookingPage() {
           </div>
 
           <div className="border-t border-slate-200 p-6 sm:p-8">
-            <h3 className="text-lg font-bold text-slate-900">Booking timeline</h3>
+            <h3 className="text-lg font-bold text-slate-900">
+              Booking timeline
+            </h3>
 
             {isStopped ? (
               <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-5">
@@ -213,7 +249,9 @@ export default function TrackBookingPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           <h4
                             className={`font-bold ${
-                              isReached ? "text-slate-900" : "text-slate-400"
+                              isReached
+                                ? "text-slate-900"
+                                : "text-slate-400"
                             }`}
                           >
                             {stage.title}
@@ -250,7 +288,8 @@ export default function TrackBookingPage() {
               <div>
                 <p className="text-sm text-slate-500">Rental duration</p>
                 <p className="mt-1 font-semibold text-slate-900">
-                  {booking.totalDays} {booking.totalDays === 1 ? "day" : "days"}
+                  {booking.totalDays}{" "}
+                  {booking.totalDays === 1 ? "day" : "days"}
                 </p>
               </div>
             </div>
@@ -258,7 +297,8 @@ export default function TrackBookingPage() {
         </section>
 
         <p className="mt-5 text-sm leading-6 text-slate-500">
-          This is a frontend demo. The timeline reflects the booking status saved in your browser; it does not provide live GPS tracking.
+          This is a frontend demo. The timeline reflects the booking status
+          saved in your browser; it does not provide live GPS tracking.
         </p>
       </div>
     </main>

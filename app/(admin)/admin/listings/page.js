@@ -122,16 +122,19 @@ export default function AdminListingsPage() {
   }, []);
 
   useEffect(() => {
-    refreshListings();
+    const timeoutId = window.setTimeout(() => {
+      refreshListings();
+
+      window.addEventListener("storage", handleStorageChange);
+      window.addEventListener("focus", handleStorageChange);
+    }, 0);
 
     function handleStorageChange() {
       refreshListings();
     }
 
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("focus", handleStorageChange);
-
     return () => {
+      window.clearTimeout(timeoutId);
       window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener("focus", handleStorageChange);
     };
@@ -156,8 +159,7 @@ export default function AdminListingsPage() {
           .join(" ")
           .toLowerCase();
 
-        const matchesSearch =
-          !query || searchableText.includes(query);
+        const matchesSearch = !query || searchableText.includes(query);
 
         const availability = getCarAvailability(car);
         const matchesAvailability =
@@ -165,8 +167,7 @@ export default function AdminListingsPage() {
           availability === availabilityFilter;
 
         const type = getCarType(car);
-        const matchesType =
-          typeFilter === "all" || type === typeFilter;
+        const matchesType = typeFilter === "all" || type === typeFilter;
 
         return (
           matchesSearch &&
@@ -701,7 +702,7 @@ export default function AdminListingsPage() {
           <div className="flex items-center gap-2 border-t border-slate-100 bg-slate-50 px-5 py-4 text-xs leading-5 text-slate-500 sm:px-6">
             <CarFront size={16} className="shrink-0" />
             <p>
-              Demo mode: listing changes are saved in this browser's local
+              Demo mode: listing changes are saved in this browser&apos;s local
               storage. Availability is not the same as administrative approval.
             </p>
           </div>

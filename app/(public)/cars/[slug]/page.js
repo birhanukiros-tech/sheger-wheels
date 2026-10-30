@@ -1,9 +1,13 @@
-
 "use client";
 
 import Image from "next/image";
 import Link from "next/link";
-import { notFound, useParams, useRouter, useSearchParams } from "next/navigation";
+import {
+  notFound,
+  useParams,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 import { useEffect, useState } from "react";
 import cars from "@/data/cars.json";
 import { createCarSlug } from "@/lib/car-slug";
@@ -34,10 +38,12 @@ function getAvailableCars() {
     const combinedCars = [...savedCars, ...cars];
     const uniqueCars = new Map();
 
-    // Prefer the latest saved version of an owner-created listing.
     combinedCars.forEach((car) => {
       if (car?.id) {
-        if (!uniqueCars.has(car.id) || String(car.id).startsWith("owner-car-")) {
+        if (
+          !uniqueCars.has(car.id) ||
+          String(car.id).startsWith("owner-car-")
+        ) {
           uniqueCars.set(car.id, car);
         }
       }
@@ -62,18 +68,28 @@ export default function CarDetailsPage() {
   const [carsLoaded, setCarsLoaded] = useState(false);
 
   useEffect(() => {
-    setUser(getCurrentUser());
-    setAllCars(getAvailableCars());
-    setCarsLoaded(true);
+    let cancelled = false;
 
     function refreshCars() {
-      setAllCars(getAvailableCars());
+      if (!cancelled) {
+        setAllCars(getAvailableCars());
+      }
     }
 
-    window.addEventListener("focus", refreshCars);
-    window.addEventListener("storage", refreshCars);
+    const timer = window.setTimeout(() => {
+      if (cancelled) return;
+
+      setUser(getCurrentUser());
+      setAllCars(getAvailableCars());
+      setCarsLoaded(true);
+
+      window.addEventListener("focus", refreshCars);
+      window.addEventListener("storage", refreshCars);
+    }, 0);
 
     return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
       window.removeEventListener("focus", refreshCars);
       window.removeEventListener("storage", refreshCars);
     };
@@ -90,7 +106,9 @@ export default function CarDetailsPage() {
   if (!car) {
     return (
       <section className="min-h-screen bg-[#F4F7FB] px-5 py-20">
-        <p className="text-center text-[#667085]">Loading car details...</p>
+        <p className="text-center text-[#667085]">
+          Loading car details...
+        </p>
       </section>
     );
   }
@@ -110,9 +128,7 @@ export default function CarDetailsPage() {
     }
 
     if (!user) {
-      router.push(
-        `/signin?next=${encodeURIComponent(carHref)}`
-      );
+      router.push(`/signin?next=${encodeURIComponent(carHref)}`);
       return;
     }
 
@@ -165,7 +181,8 @@ export default function CarDetailsPage() {
               </p>
 
               <p className="mt-6 leading-7 text-[#667085]">
-                {car.description || "Contact the owner for more information about this car."}
+                {car.description ||
+                  "Contact the owner for more information about this car."}
               </p>
 
               <div className="mt-7 grid grid-cols-2 gap-3">
@@ -268,4 +285,3 @@ export default function CarDetailsPage() {
     </section>
   );
 }
-

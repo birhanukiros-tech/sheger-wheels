@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   CalendarDays,
   CarFront,
@@ -440,7 +441,7 @@ export default function AdminBookingsPage() {
 
                       <td className="px-5 py-4 text-right">
                         <Link
-                         href={`/admin/bookings/${encodeURIComponent(booking.id)}`}
+                          href={`/admin/bookings/${encodeURIComponent(booking.id)}`}
                           aria-label={`View booking ${booking.id}`}
                           className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-[#0866F5] transition hover:border-blue-200 hover:bg-blue-50"
                         >
@@ -482,11 +483,16 @@ export default function AdminBookingsPage() {
 
                   <div className="mt-4 flex gap-3">
                     {booking.car?.image ? (
-                      <img
-                        src={booking.car.image}
-                        alt={booking.carTitle}
-                        className="h-20 w-24 shrink-0 rounded-lg bg-slate-100 object-cover"
-                      />
+                      <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-lg bg-slate-100">
+                        <Image
+                          src={booking.car.image}
+                          alt={booking.carTitle}
+                          fill
+                          sizes="96px"
+                          unoptimized
+                          className="object-cover"
+                        />
+                      </div>
                     ) : (
                       <div className="flex h-20 w-24 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-400">
                         <CarFront size={25} />

@@ -1,6 +1,8 @@
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { getBookingsByRenter } from "@/lib/bookings";
@@ -36,18 +38,34 @@ export default function BookingsPage() {
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
+    let cancelled = false;
 
-    if (!currentUser || currentUser.role !== "renter") {
-      window.location.replace(
-        `/signin?next=${encodeURIComponent("/bookings")}`
-      );
-      return;
-    }
+    const initializeBookings = () => {
+      if (cancelled) return;
 
-    setUser(currentUser);
-    setBookings(getBookingsByRenter(currentUser.id) || []);
-    setAuthChecked(true);
+      const currentUser = getCurrentUser();
+
+      if (!currentUser || currentUser.role !== "renter") {
+        window.location.replace(
+          `/signin?next=${encodeURIComponent("/bookings")}`
+        );
+        return;
+      }
+
+      const renterBookings = getBookingsByRenter(currentUser.id) || [];
+
+      if (cancelled) return;
+
+      setUser(currentUser);
+      setBookings(renterBookings);
+      setAuthChecked(true);
+    };
+
+    Promise.resolve().then(initializeBookings);
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const filteredBookings = useMemo(() => {
@@ -62,7 +80,8 @@ export default function BookingsPage() {
   const counts = useMemo(
     () => ({
       total: bookings.length,
-      pending: bookings.filter((booking) => booking.status === "pending").length,
+      pending: bookings.filter((booking) => booking.status === "pending")
+        .length,
       confirmed: bookings.filter(
         (booking) => booking.status === "confirmed"
       ).length,
@@ -76,7 +95,9 @@ export default function BookingsPage() {
   if (!authChecked) {
     return (
       <main className="mx-auto max-w-6xl px-4 py-16">
-        <p className="text-center text-slate-500">Loading your bookings…</p>
+        <p className="text-center text-slate-500">
+          Loading your bookings…
+        </p>
       </main>
     );
   }
@@ -202,12 +223,15 @@ export default function BookingsPage() {
                     className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
                   >
                     <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[180px_1fr_auto] lg:items-center">
-                      <div className="h-36 overflow-hidden rounded-xl bg-slate-100 sm:h-40 lg:h-32">
+                      <div className="relative h-36 overflow-hidden rounded-xl bg-slate-100 sm:h-40 lg:h-32">
                         {car?.image ? (
-                          <img
+                          <Image
                             src={car.image}
                             alt={`${car.year} ${car.make} ${car.model}`}
-                            className="h-full w-full object-cover"
+                            fill
+                            sizes="(max-width: 640px) 100vw, 180px"
+                            className="object-cover"
+                            unoptimized
                           />
                         ) : (
                           <div className="flex h-full items-center justify-center text-sm text-slate-400">

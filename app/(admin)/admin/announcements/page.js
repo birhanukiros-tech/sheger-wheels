@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -18,11 +17,7 @@ import {
 } from "lucide-react";
 
 import { getCurrentUser, hasRole } from "@/lib/auth";
-import {
-  readStoredData,
-  writeStoredData,
-} from "@/lib/storage";
-import { STORAGE_KEYS } from "@/lib/storage";
+import { readStoredData, writeStoredData, STORAGE_KEYS } from "@/lib/storage";
 
 const PAGE_SIZE = 8;
 
@@ -61,18 +56,15 @@ function formatDate(value) {
 
 function getAudienceLabel(audience) {
   return (
-    AUDIENCES.find((item) => item.value === audience)?.label ??
-    "Everyone"
+    AUDIENCES.find((item) => item.value === audience)?.label ?? "Everyone"
   );
 }
 
 export default function AdminAnnouncementsPage() {
   const router = useRouter();
 
-  const [authorized, setAuthorized] = useState(false);
+  const [accessStatus, setAccessStatus] = useState("checking");
   const [announcements, setAnnouncements] = useState([]);
-  const [loading, setLoading] = useState(true);
-
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [audienceFilter, setAudienceFilter] = useState("all");
@@ -89,21 +81,34 @@ export default function AdminAnnouncementsPage() {
     audience: "all",
   });
 
+  
   useEffect(() => {
-    const user = getCurrentUser();
+    let cancelled = false;
 
-    if (!hasRole(user, ["admin"])) {
-      router.replace(
-        "/signin?role=admin&next=%2Fadmin%2Fannouncements"
-      );
-      return;
-    }
+    const checkAccess = () => {
+      const user = getCurrentUser();
 
-    setAuthorized(true);
+      if (!hasRole(user, ["admin"])) {
+        router.replace(
+          "/signin?role=admin&next=%2Fadmin%2Fannouncements"
+        );
+        return;
+      }
 
-    const saved = readStoredData(STORAGE_KEYS.announcements, []);
-    setAnnouncements(Array.isArray(saved) ? saved : []);
-    setLoading(false);
+      const saved = readStoredData(STORAGE_KEYS.announcements, []);
+
+      if (!cancelled) {
+        setAnnouncements(Array.isArray(saved) ? saved : []);
+        setAccessStatus("authorized");
+      }
+    };
+
+    const timer = window.setTimeout(checkAccess, 0);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [router]);
 
   function saveAnnouncements(nextAnnouncements) {
@@ -297,11 +302,13 @@ export default function AdminAnnouncementsPage() {
 
   const draftCount = announcements.length - publishedCount;
 
-  if (!authorized || loading) {
+  if (accessStatus !== "authorized") {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#F5F7FB] px-4">
         <p className="text-sm text-[#667085]">
-          Checking administrator access...
+          {accessStatus === "denied"
+            ? "Redirecting to administrator sign-in..."
+            : "Checking administrator access..."}
         </p>
       </main>
     );

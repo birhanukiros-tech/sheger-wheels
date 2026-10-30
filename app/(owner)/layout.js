@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -22,6 +21,8 @@ export default function OwnerLayout({ children }) {
   const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
+    let timeoutId;
+
     const currentUser = getCurrentUser();
 
     if (!currentUser) {
@@ -38,8 +39,16 @@ export default function OwnerLayout({ children }) {
       return;
     }
 
-    setUser(currentUser);
-    setAuthChecked(true);
+    timeoutId = window.setTimeout(() => {
+      setUser(currentUser);
+      setAuthChecked(true);
+    }, 0);
+
+    return () => {
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+    };
   }, [pathname, router]);
 
   function handleSignOut() {

@@ -13,7 +13,7 @@ export default function Error({ error, reset }) {
         </p>
 
         <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
-          We couldn't load this page
+          We couldn&apos;t load this page
         </h1>
 
         <p className="mt-3 text-sm leading-6 text-slate-600">

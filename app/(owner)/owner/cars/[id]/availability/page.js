@@ -1,6 +1,8 @@
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
@@ -109,45 +111,58 @@ export default function OwnerCarAvailabilityPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
+    let cancelled = false;
 
-    if (!currentUser || currentUser.role !== "owner") {
-      router.replace(
-        `/signin?next=${encodeURIComponent(`/owner/cars/${carId}/availability`)}`
+    Promise.resolve().then(() => {
+      if (cancelled) return;
+
+      const currentUser = getCurrentUser();
+
+      if (!currentUser || currentUser.role !== "owner") {
+        router.replace(
+          `/signin?next=${encodeURIComponent(`/owner/cars/${carId}/availability`)}`
+        );
+        return;
+      }
+
+      setOwner(currentUser);
+
+      const ownerCars = getOwnerCars(currentUser);
+      const selectedCar = ownerCars.find(
+        (item) => String(item.id) === String(carId)
       );
-      return;
-    }
 
-    setOwner(currentUser);
+      if (!selectedCar) {
+        setError("We couldn't find this vehicle in your owner listings.");
+        setLoading(false);
+        return;
+      }
 
-    const ownerCars = getOwnerCars(currentUser);
-    const selectedCar = ownerCars.find(
-      (item) => String(item.id) === String(carId)
-    );
+      setCar(selectedCar);
 
-    if (!selectedCar) {
-      setError("We couldn't find this vehicle in your owner listings.");
+      const availability = readAvailability();
+      const dates = Array.isArray(availability[String(carId)])
+        ? availability[String(carId)]
+        : [];
+
+      setBlockedDates(
+        [...new Set(dates.map(toDateKey).filter(Boolean))].sort()
+      );
+
+      const ownerBookings = getBookingsByOwner(currentUser.id) || [];
+
+      setBookings(
+        ownerBookings.filter(
+          (booking) => String(booking.carId) === String(carId)
+        )
+      );
+
       setLoading(false);
-      return;
-    }
+    });
 
-    setCar(selectedCar);
-
-    const availability = readAvailability();
-    const dates = Array.isArray(availability[String(carId)])
-      ? availability[String(carId)]
-      : [];
-
-    setBlockedDates([...new Set(dates.map(toDateKey).filter(Boolean))].sort());
-
-    const ownerBookings = getBookingsByOwner(currentUser.id) || [];
-    setBookings(
-      ownerBookings.filter(
-        (booking) => String(booking.carId) === String(carId)
-      )
-    );
-
-    setLoading(false);
+    return () => {
+      cancelled = true;
+    };
   }, [carId, router]);
 
   const protectedDates = useMemo(() => {
@@ -305,12 +320,15 @@ export default function OwnerCarAvailabilityPage() {
         </header>
 
         <section className="mt-7 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:flex">
-          <div className="h-56 bg-slate-100 sm:h-auto sm:min-h-64 sm:w-2/5">
+          <div className="relative h-56 bg-slate-100 sm:h-auto sm:min-h-64 sm:w-2/5">
             {car.image ? (
-              <img
+              <Image
                 src={car.image}
                 alt={getCarName(car)}
-                className="h-full w-full object-cover"
+                fill
+                sizes="(max-width: 640px) 100vw, 40vw"
+                unoptimized
+                className="object-cover"
               />
             ) : (
               <div className="flex h-full items-center justify-center text-5xl">

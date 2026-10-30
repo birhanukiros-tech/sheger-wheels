@@ -1,6 +1,8 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
@@ -64,45 +66,64 @@ export default function BookingDetailsPage() {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     const loadCars = () => {
-      setAllCars(getAllCars());
+      if (!cancelled) {
+        setAllCars(getAllCars());
+      }
     };
 
-    loadCars();
+    Promise.resolve().then(loadCars);
 
     window.addEventListener("focus", loadCars);
     window.addEventListener("storage", loadCars);
 
     return () => {
+      cancelled = true;
       window.removeEventListener("focus", loadCars);
       window.removeEventListener("storage", loadCars);
     };
   }, []);
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
+    let cancelled = false;
 
-    if (!currentUser || currentUser.role !== "renter") {
-      router.replace(
-        `/signin?next=${encodeURIComponent(`/bookings/${bookingId}`)}`
+    const initializeBooking = () => {
+      if (cancelled) return;
+
+      const currentUser = getCurrentUser();
+
+      if (!currentUser || currentUser.role !== "renter") {
+        router.replace(
+          `/signin?next=${encodeURIComponent(`/bookings/${bookingId}`)}`
+        );
+        return;
+      }
+
+      const renterBookings = getBookingsByRenter(currentUser.id) || [];
+      const currentBooking = renterBookings.find(
+        (item) => String(item.id) === String(bookingId)
       );
-      return;
-    }
 
-    setUser(currentUser);
+      if (cancelled) return;
 
-    const renterBookings = getBookingsByRenter(currentUser.id) || [];
-    const currentBooking = renterBookings.find(
-      (item) => String(item.id) === String(bookingId)
-    );
+      setUser(currentUser);
 
-    if (!currentBooking) {
-      setNotFound(true);
-    } else {
-      setBooking(currentBooking);
-    }
+      if (!currentBooking) {
+        setNotFound(true);
+      } else {
+        setBooking(currentBooking);
+      }
 
-    setAuthChecked(true);
+      setAuthChecked(true);
+    };
+
+    Promise.resolve().then(initializeBooking);
+
+    return () => {
+      cancelled = true;
+    };
   }, [bookingId, router]);
 
   if (!authChecked) {
@@ -196,12 +217,15 @@ export default function BookingDetailsPage() {
         <div className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
           <div className="space-y-6">
             <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <div className="h-56 bg-slate-100 sm:h-72">
+              <div className="relative h-56 bg-slate-100 sm:h-72">
                 {car?.image ? (
-                  <img
+                  <Image
                     src={car.image}
                     alt={`${car.year} ${car.make} ${car.model}`}
-                    className="h-full w-full object-cover"
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 60vw, 700px"
+                    className="object-cover"
+                    unoptimized
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center text-5xl">

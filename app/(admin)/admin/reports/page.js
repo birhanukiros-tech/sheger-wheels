@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -92,27 +93,31 @@ export default function AdminReportsPage() {
   const [bookingPage, setBookingPage] = useState(1);
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
+    const timeoutId = window.setTimeout(() => {
+      const currentUser = getCurrentUser();
 
-    if (!currentUser || currentUser.role !== "admin") {
-      router.replace(
-        `/signin?role=admin&next=${encodeURIComponent("/admin/reports")}`
-      );
-      return;
-    }
+      if (!currentUser || currentUser.role !== "admin") {
+        router.replace(
+          `/signin?role=admin&next=${encodeURIComponent("/admin/reports")}`
+        );
+        return;
+      }
 
-    const savedCars = readStoredData("sheggar-wheels-cars", []);
+      const savedCars = readStoredData("sheggar-wheels-cars", []);
 
-    setBookings(readStoredData(STORAGE_KEYS.bookings, []));
-    setUsers(readStoredData(STORAGE_KEYS.users, []));
-    setCars([
-      ...(Array.isArray(carsData) ? carsData : []),
-      ...(Array.isArray(savedCars) ? savedCars : []),
-    ]);
-    setReviews(readStoredData(STORAGE_KEYS.reviews, []));
-    setDisputes(readStoredData(STORAGE_KEYS.disputes, []));
-    setAuthorized(true);
-    setLoading(false);
+      setBookings(readStoredData(STORAGE_KEYS.bookings, []));
+      setUsers(readStoredData(STORAGE_KEYS.users, []));
+      setCars([
+        ...(Array.isArray(carsData) ? carsData : []),
+        ...(Array.isArray(savedCars) ? savedCars : []),
+      ]);
+      setReviews(readStoredData(STORAGE_KEYS.reviews, []));
+      setDisputes(readStoredData(STORAGE_KEYS.disputes, []));
+      setAuthorized(true);
+      setLoading(false);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [router]);
 
   const summary = useMemo(() => {
@@ -174,19 +179,17 @@ export default function AdminReportsPage() {
   );
 
   const bookingPages = Math.max(1, Math.ceil(bookings.length / PAGE_SIZE));
+  const safeBookingPage = Math.min(bookingPage, bookingPages);
 
   const visibleBookings = useMemo(() => {
-    const start = (bookingPage - 1) * PAGE_SIZE;
+    const start = (safeBookingPage - 1) * PAGE_SIZE;
+
     return [...bookings]
       .sort((a, b) =>
         String(b.createdAt || "").localeCompare(String(a.createdAt || ""))
       )
       .slice(start, start + PAGE_SIZE);
-  }, [bookings, bookingPage]);
-
-  useEffect(() => {
-    setBookingPage((current) => Math.min(current, bookingPages));
-  }, [bookingPages]);
+  }, [bookings, safeBookingPage]);
 
   function exportBookings() {
     downloadCsv(
@@ -512,26 +515,35 @@ export default function AdminReportsPage() {
               <div className="flex flex-col gap-3 border-t border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-slate-500">
                   Showing{" "}
-                  {Math.min((bookingPage - 1) * PAGE_SIZE + 1, bookings.length)}{" "}
-                  – {Math.min(bookingPage * PAGE_SIZE, bookings.length)} of{" "}
+                  {Math.min(
+                    (safeBookingPage - 1) * PAGE_SIZE + 1,
+                    bookings.length
+                  )}{" "}
+                  – {Math.min(safeBookingPage * PAGE_SIZE, bookings.length)} of{" "}
                   {bookings.length} bookings
                 </p>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    disabled={bookingPage === 1}
-                    onClick={() => setBookingPage((current) => current - 1)}
+                    disabled={safeBookingPage === 1}
+                    onClick={() =>
+                      setBookingPage((current) => Math.max(1, current - 1))
+                    }
                     className="min-h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700 disabled:opacity-40"
                   >
                     Previous
                   </button>
                   <span className="text-sm text-slate-600">
-                    Page {bookingPage} of {bookingPages}
+                    Page {safeBookingPage} of {bookingPages}
                   </span>
                   <button
                     type="button"
-                    disabled={bookingPage >= bookingPages}
-                    onClick={() => setBookingPage((current) => current + 1)}
+                    disabled={safeBookingPage >= bookingPages}
+                    onClick={() =>
+                      setBookingPage((current) =>
+                        Math.min(bookingPages, current + 1)
+                      )
+                    }
                     className="min-h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700 disabled:opacity-40"
                   >
                     Next

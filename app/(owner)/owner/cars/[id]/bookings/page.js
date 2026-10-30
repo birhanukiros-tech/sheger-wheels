@@ -148,44 +148,60 @@ export default function OwnerCarBookingsPage() {
   }, []);
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
+    let cancelled = false;
+    let refreshFromStorage;
 
-    if (!currentUser || currentUser.role !== "owner") {
-      router.replace("/signin");
-      return;
-    }
+    const timeoutId = window.setTimeout(() => {
+      const currentUser = getCurrentUser();
 
-    const allCars = getAllCars();
-    const selectedCar = allCars.find(
-      (item) => String(item.id) === String(carId)
-    );
+      if (!currentUser || currentUser.role !== "owner") {
+        router.replace("/signin");
+        return;
+      }
 
-    if (
-      !selectedCar ||
-      String(selectedCar.ownerId) !== String(currentUser.id)
-    ) {
+      const allCars = getAllCars();
+      const selectedCar = allCars.find(
+        (item) => String(item.id) === String(carId)
+      );
+
+      if (
+        !selectedCar ||
+        String(selectedCar.ownerId) !== String(currentUser.id)
+      ) {
+        if (cancelled) return;
+
+        setUser(currentUser);
+        setAuthChecked(true);
+        setLoading(false);
+        setError("This car was not found in your listings.");
+        return;
+      }
+
+      if (cancelled) return;
+
       setUser(currentUser);
+      refreshData(currentUser.id, carId);
       setAuthChecked(true);
       setLoading(false);
-      setError("This car was not found in your listings.");
-      return;
-    }
 
-    setUser(currentUser);
-    refreshData(currentUser.id, carId);
-    setAuthChecked(true);
-    setLoading(false);
+      refreshFromStorage = () => {
+        if (!cancelled) {
+          refreshData(currentUser.id, carId);
+        }
+      };
 
-    function refreshFromStorage() {
-      refreshData(currentUser.id, carId);
-    }
-
-    window.addEventListener("focus", refreshFromStorage);
-    window.addEventListener("storage", refreshFromStorage);
+      window.addEventListener("focus", refreshFromStorage);
+      window.addEventListener("storage", refreshFromStorage);
+    }, 0);
 
     return () => {
-      window.removeEventListener("focus", refreshFromStorage);
-      window.removeEventListener("storage", refreshFromStorage);
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+
+      if (refreshFromStorage) {
+        window.removeEventListener("focus", refreshFromStorage);
+        window.removeEventListener("storage", refreshFromStorage);
+      }
     };
   }, [carId, router, refreshData]);
 
@@ -272,7 +288,7 @@ export default function OwnerCarBookingsPage() {
     return (
       <main className="mx-auto max-w-7xl px-4 py-16">
         <p className="text-center text-slate-500">
-          Loading this car's bookings…
+          Loading this car&apos;s bookings…
         </p>
       </main>
     );
@@ -409,7 +425,7 @@ export default function OwnerCarBookingsPage() {
                 Bookings for this car
               </h2>
               <p className="mt-1 text-sm text-slate-500">
-                Review renter details and update each booking's status.
+                Review renter details and update each booking&apos;s status.
               </p>
             </div>
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { getCurrentUser } from "@/lib/auth";
 import { formatCurrency } from "@/lib/format";
 import carsData from "@/data/cars.json";
@@ -47,13 +48,23 @@ export default function OwnerCarsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const owner = getCurrentUser();
+    let cancelled = false;
 
-    if (owner?.role === "owner") {
-      setCars(getOwnerCars(owner));
-    }
+    Promise.resolve().then(() => {
+      if (cancelled) return;
 
-    setLoading(false);
+      const owner = getCurrentUser();
+
+      if (owner?.role === "owner") {
+        setCars(getOwnerCars(owner));
+      }
+
+      setLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (loading) {
@@ -147,10 +158,13 @@ export default function OwnerCarsPage() {
                 >
                   <div className="relative h-56 overflow-hidden bg-slate-100 sm:h-60">
                     {car.image ? (
-                      <img
+                      <Image
                         src={car.image}
                         alt={getCarName(car)}
-                        className="h-full w-full object-cover"
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                        unoptimized
+                        className="object-cover"
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center text-5xl">

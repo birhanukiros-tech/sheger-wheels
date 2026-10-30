@@ -13,12 +13,12 @@ export default function NotFound() {
         </div>
 
         <h1 className="mt-6 text-2xl font-bold tracking-tight text-slate-900">
-          We couldn't find that page
+          We couldn&apos;t find that page
         </h1>
 
         <p className="mt-3 text-sm leading-6 text-slate-600">
           The page may have moved, the link may be incorrect, or the item
-          you're looking for may no longer be available.
+          you&apos;re looking for may no longer be available.
         </p>
 
         <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">

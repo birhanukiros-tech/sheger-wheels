@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { MessageSquareText, Star } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
@@ -24,7 +25,6 @@ const ratingLabels = {
 
 function getAllCars() {
   const storedCars = readStoredData("sheggar-wheels-cars", []);
-
   const allCars = Array.isArray(cars) ? [...cars] : [];
 
   if (Array.isArray(storedCars)) {
@@ -59,45 +59,59 @@ export default function ReviewBookingPage() {
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
+    let timeoutId;
+    let cancelled = false;
 
-    if (!currentUser || currentUser.role !== "renter") {
-      router.replace(
-        `/signin?next=${encodeURIComponent(`/bookings/${id}/review`)}`
-      );
-      return;
-    }
+    const initializeReview = () => {
+      if (cancelled) return;
 
-    const currentBooking = getBookingById(String(id));
+      const currentUser = getCurrentUser();
 
-    if (
-      !currentBooking ||
-      String(currentBooking.renterId) !== String(currentUser.id)
-    ) {
+      if (!currentUser || currentUser.role !== "renter") {
+        router.replace(
+          `/signin?next=${encodeURIComponent(`/bookings/${id}/review`)}`
+        );
+        return;
+      }
+
+      const currentBooking = getBookingById(String(id));
+
+      if (
+        !currentBooking ||
+        String(currentBooking.renterId) !== String(currentUser.id)
+      ) {
+        setAuthChecked(true);
+        return;
+      }
+
+      const allCars = getAllCars();
+      const matchedCar =
+        allCars.find(
+          (item) => String(item.id) === String(currentBooking.carId)
+        ) ?? null;
+
+      const reviews = readStoredData(STORAGE_KEYS.reviews, []);
+      const savedReview = Array.isArray(reviews)
+        ? reviews.find(
+            (review) =>
+              String(review.bookingId) === String(currentBooking.id) &&
+              String(review.renterId) === String(currentUser.id)
+          ) ?? null
+        : null;
+
+      setUser(currentUser);
+      setBooking(currentBooking);
+      setCar(matchedCar);
+      setExistingReview(savedReview);
       setAuthChecked(true);
-      return;
-    }
+    };
 
-    const allCars = getAllCars();
-    const matchedCar =
-      allCars.find(
-        (item) => String(item.id) === String(currentBooking.carId)
-      ) ?? null;
+    timeoutId = window.setTimeout(initializeReview, 0);
 
-    const reviews = readStoredData(STORAGE_KEYS.reviews, []);
-    const savedReview = Array.isArray(reviews)
-      ? reviews.find(
-          (review) =>
-            String(review.bookingId) === String(currentBooking.id) &&
-            String(review.renterId) === String(currentUser.id)
-        ) ?? null
-      : null;
-
-    setUser(currentUser);
-    setBooking(currentBooking);
-    setCar(matchedCar);
-    setExistingReview(savedReview);
-    setAuthChecked(true);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
   }, [id, router]);
 
   function handleSubmit(event) {
@@ -145,13 +159,14 @@ export default function ReviewBookingPage() {
     );
 
     if (alreadyReviewed) {
-      setExistingReview(
+      const savedReview =
         existingReviews.find(
           (review) =>
             String(review.bookingId) === String(booking.id) &&
             String(review.renterId) === String(user.id)
-        ) ?? null
-      );
+        ) ?? null;
+
+      setExistingReview(savedReview);
       setError("You've already submitted a review for this booking.");
       return;
     }
@@ -188,7 +203,9 @@ export default function ReviewBookingPage() {
   if (!authChecked) {
     return (
       <main className="mx-auto max-w-4xl px-4 py-16">
-        <p className="text-center text-slate-500">Loading review form…</p>
+        <p className="text-center text-slate-500">
+          Loading review form…
+        </p>
       </main>
     );
   }
@@ -201,7 +218,7 @@ export default function ReviewBookingPage() {
             Booking not found
           </h1>
           <p className="mt-3 text-slate-600">
-            We couldn't find this booking under your account.
+            We couldn&apos;t find this booking under your account.
           </p>
           <Link
             href="/bookings"
@@ -262,17 +279,22 @@ export default function ReviewBookingPage() {
 
         <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:p-8">
-            <div className="flex h-36 w-full items-center justify-center overflow-hidden rounded-xl bg-slate-100 sm:w-48 sm:shrink-0">
+            <div className="relative h-36 w-full overflow-hidden rounded-xl bg-slate-100 sm:w-48 sm:shrink-0">
               {car?.image ? (
-                <img
+                <Image
                   src={car.image}
                   alt={`${car.year ?? ""} ${car.make ?? ""} ${car.model ?? "Rental car"}`.trim()}
-                  className="h-full w-full object-cover"
+                  fill
+                  sizes="(max-width: 640px) 100vw, 192px"
+                  className="object-cover"
+                  unoptimized
                 />
               ) : (
-                <span className="text-sm text-slate-400">
-                  Car image unavailable
-                </span>
+                <div className="flex h-full items-center justify-center">
+                  <span className="text-sm text-slate-400">
+                    Car image unavailable
+                  </span>
+                </div>
               )}
             </div>
 
@@ -335,8 +357,8 @@ export default function ReviewBookingPage() {
                 </div>
               ) : (
                 <p className="mt-4 rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-600">
-                  The owner hasn't replied to your review yet. You can return
-                  here later to check for a response.
+                  The owner hasn&apos;t replied to your review yet. You can
+                  return here later to check for a response.
                 </p>
               )}
             </div>
@@ -436,7 +458,7 @@ export default function ReviewBookingPage() {
               to your review.
             </p>
             <p className="mt-3 text-sm text-emerald-800">
-              Return to this page later to see the owner's reply.
+              Return to this page later to see the owner&apos;s reply.
             </p>
             <Link
               href="/bookings"

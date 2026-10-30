@@ -85,6 +85,7 @@ export default function AdminUsersPage() {
         : initializeDemoUsers();
 
       setUsers(Array.isArray(availableUsers) ? availableUsers : []);
+      setNotice("");
     } catch {
       setUsers([]);
       setNotice("Unable to load users. Please refresh the page.");
@@ -94,7 +95,11 @@ export default function AdminUsersPage() {
   }, []);
 
   useEffect(() => {
-    loadUsers();
+    const timeoutId = window.setTimeout(() => {
+      loadUsers();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [loadUsers]);
 
   const filteredUsers = useMemo(() => {

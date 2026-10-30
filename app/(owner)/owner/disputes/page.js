@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -117,26 +116,36 @@ export default function OwnerDisputesPage() {
   }, []);
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
-
-    if (!currentUser || currentUser.role !== "owner") {
-      router.replace("/signin");
-      return;
-    }
-
-    setUser(currentUser);
-    refreshData(currentUser.id);
-    setAuthChecked(true);
-    setLoading(false);
+    let cancelled = false;
+    let currentUser = null;
 
     function refreshFromStorage() {
-      refreshData(currentUser.id);
+      if (!cancelled && currentUser) {
+        refreshData(currentUser.id);
+      }
     }
 
-    window.addEventListener("focus", refreshFromStorage);
-    window.addEventListener("storage", refreshFromStorage);
+    Promise.resolve().then(() => {
+      if (cancelled) return;
+
+      currentUser = getCurrentUser();
+
+      if (!currentUser || currentUser.role !== "owner") {
+        router.replace("/signin");
+        return;
+      }
+
+      setUser(currentUser);
+      refreshData(currentUser.id);
+      setAuthChecked(true);
+      setLoading(false);
+
+      window.addEventListener("focus", refreshFromStorage);
+      window.addEventListener("storage", refreshFromStorage);
+    });
 
     return () => {
+      cancelled = true;
       window.removeEventListener("focus", refreshFromStorage);
       window.removeEventListener("storage", refreshFromStorage);
     };

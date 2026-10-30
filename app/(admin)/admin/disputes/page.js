@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -80,21 +79,31 @@ export default function AdminDisputesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
+    let cancelled = false;
 
-    if (!currentUser || currentUser.role !== "admin") {
-      router.replace(
-        `/signin?role=admin&next=${encodeURIComponent("/admin/disputes")}`
-      );
-      return;
-    }
+    const timer = window.setTimeout(() => {
+      if (cancelled) return;
 
-    setAuthorized(true);
+      const currentUser = getCurrentUser();
 
-    setDisputes(readStoredData(STORAGE_KEYS.disputes, []));
-    setUsers(readStoredData(STORAGE_KEYS.users, []));
-    setBookings(readStoredData(STORAGE_KEYS.bookings, []));
-    setLoading(false);
+      if (!currentUser || currentUser.role !== "admin") {
+        router.replace(
+          `/signin?role=admin&next=${encodeURIComponent("/admin/disputes")}`
+        );
+        return;
+      }
+
+      setDisputes(readStoredData(STORAGE_KEYS.disputes, []));
+      setUsers(readStoredData(STORAGE_KEYS.users, []));
+      setBookings(readStoredData(STORAGE_KEYS.bookings, []));
+      setAuthorized(true);
+      setLoading(false);
+    }, 0);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [router]);
 
   const filteredDisputes = useMemo(() => {
@@ -108,7 +117,8 @@ export default function AdminDisputesPage() {
       );
 
       const reporter = users.find(
-        (user) => String(user.id) === String(dispute.reporterId || dispute.userId)
+        (user) =>
+          String(user.id) === String(dispute.reporterId || dispute.userId)
       );
 
       const searchText = [
@@ -142,9 +152,12 @@ export default function AdminDisputesPage() {
     Math.ceil(filteredDisputes.length / PAGE_SIZE)
   );
 
+  // Keep the displayed page valid when filters reduce the results.
+  const currentPage = Math.min(page, totalPages);
+
   const visibleDisputes = filteredDisputes.slice(
-    (page - 1) * PAGE_SIZE,
-    page * PAGE_SIZE
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
   );
 
   const openCount = disputes.filter((dispute) =>
@@ -158,10 +171,6 @@ export default function AdminDisputesPage() {
       String(getDisputeStatus(dispute)).toLowerCase()
     )
   ).length;
-
-  useEffect(() => {
-    setPage(1);
-  }, [search, statusFilter]);
 
   if (loading || !authorized) {
     return (
@@ -230,7 +239,10 @@ export default function AdminDisputesPage() {
               <input
                 type="search"
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPage(1);
+                }}
                 placeholder="Search disputes, bookings, or users…"
                 className="min-h-11 w-full rounded-lg border border-slate-200 py-2 pl-10 pr-3 text-sm outline-none focus:border-[#0866F5] focus:ring-2 focus:ring-blue-100"
               />
@@ -238,7 +250,10 @@ export default function AdminDisputesPage() {
 
             <select
               value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value)}
+              onChange={(event) => {
+                setStatusFilter(event.target.value);
+                setPage(1);
+              }}
               aria-label="Filter disputes by status"
               className="min-h-11 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#0866F5]"
             >
@@ -410,29 +425,35 @@ export default function AdminDisputesPage() {
                 <p className="text-sm text-slate-500">
                   Showing{" "}
                   {Math.min(
-                    (page - 1) * PAGE_SIZE + 1,
+                    (currentPage - 1) * PAGE_SIZE + 1,
                     filteredDisputes.length
                   )}{" "}
-                  – {Math.min(page * PAGE_SIZE, filteredDisputes.length)} of{" "}
-                  {filteredDisputes.length} disputes
+                  – {Math.min(currentPage * PAGE_SIZE, filteredDisputes.length)}{" "}
+                  of {filteredDisputes.length} disputes
                 </p>
 
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    disabled={page === 1}
-                    onClick={() => setPage((current) => current - 1)}
+                    disabled={currentPage === 1}
+                    onClick={() =>
+                      setPage((current) => Math.max(1, current - 1))
+                    }
                     className="min-h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Previous
                   </button>
                   <span className="min-w-20 text-center text-sm text-slate-600">
-                    Page {page} of {totalPages}
+                    Page {currentPage} of {totalPages}
                   </span>
                   <button
                     type="button"
-                    disabled={page >= totalPages}
-                    onClick={() => setPage((current) => current + 1)}
+                    disabled={currentPage >= totalPages}
+                    onClick={() =>
+                      setPage((current) =>
+                        Math.min(totalPages, current + 1)
+                      )
+                    }
                     className="min-h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Next

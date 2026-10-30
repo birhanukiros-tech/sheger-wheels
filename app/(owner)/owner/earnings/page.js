@@ -23,21 +23,31 @@ export default function OwnerEarningsPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    try {
-      const user = getCurrentUser();
+    let cancelled = false;
 
-      if (!user) {
-        setError("Please sign in to view your earnings.");
-        return;
+    Promise.resolve().then(() => {
+      if (cancelled) return;
+
+      try {
+        const user = getCurrentUser();
+
+        if (!user) {
+          setError("Please sign in to view your earnings.");
+          return;
+        }
+
+        const ownerBookings = getBookingsByOwner(user.id);
+        setBookings(Array.isArray(ownerBookings) ? ownerBookings : []);
+      } catch {
+        setError("We couldn't load your earnings. Please refresh the page.");
+      } finally {
+        setLoading(false);
       }
+    });
 
-      const ownerBookings = getBookingsByOwner(user.id);
-      setBookings(Array.isArray(ownerBookings) ? ownerBookings : []);
-    } catch {
-      setError("We couldn't load your earnings. Please refresh the page.");
-    } finally {
-      setLoading(false);
-    }
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const completedBookings = useMemo(

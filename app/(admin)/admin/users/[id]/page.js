@@ -76,32 +76,45 @@ export default function AdminUserDetailsPage() {
   const [accessDenied, setAccessDenied] = useState(false);
 
   useEffect(() => {
+    let timeoutId;
+
     const currentUser = getCurrentUser();
 
     if (!currentUser || currentUser.role !== "admin") {
-      setAccessDenied(true);
+      timeoutId = window.setTimeout(() => {
+        setAccessDenied(true);
+      }, 0);
+
       router.replace(
         `/signin?role=admin&next=${encodeURIComponent(
           `/admin/users/${userId}`
         )}`
       );
-      return;
+
+      return () => window.clearTimeout(timeoutId);
     }
 
     const users = readStoredData(STORAGE_KEYS.users, []);
 
     if (!Array.isArray(users)) {
-      setUser(null);
-      setLoading(false);
-      return;
+      timeoutId = window.setTimeout(() => {
+        setUser(null);
+        setLoading(false);
+      }, 0);
+
+      return () => window.clearTimeout(timeoutId);
     }
 
     const selectedUser = users.find(
       (item) => String(item.id) === String(userId)
     );
 
-    setUser(selectedUser || null);
-    setLoading(false);
+    timeoutId = window.setTimeout(() => {
+      setUser(selectedUser || null);
+      setLoading(false);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [router, userId]);
 
   if (loading || accessDenied) {
@@ -109,7 +122,9 @@ export default function AdminUserDetailsPage() {
       <main className="flex min-h-[60vh] items-center justify-center bg-[#F4F7FB] px-4">
         <div className="flex items-center gap-3 text-sm text-[#667085]">
           <LoaderCircle className="animate-spin" size={20} />
-          {accessDenied ? "Checking administrator access..." : "Loading user details..."}
+          {accessDenied
+            ? "Checking administrator access..."
+            : "Loading user details..."}
         </div>
       </main>
     );

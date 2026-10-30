@@ -60,6 +60,8 @@ export default function AdminDisputeDetailsPage() {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
+    let timeoutId;
+
     const currentUser = getCurrentUser();
 
     if (!currentUser || currentUser.role !== "admin") {
@@ -80,9 +82,12 @@ export default function AdminDisputeDetailsPage() {
     );
 
     if (!savedDispute) {
-      setNotFound(true);
-      setLoading(false);
-      return;
+      timeoutId = window.setTimeout(() => {
+        setNotFound(true);
+        setLoading(false);
+      }, 0);
+
+      return () => window.clearTimeout(timeoutId);
     }
 
     const selectedReporter = users.find(
@@ -95,10 +100,14 @@ export default function AdminDisputeDetailsPage() {
       (item) => String(item.id) === String(savedDispute.bookingId)
     );
 
-    setDispute(savedDispute);
-    setReporter(selectedReporter || null);
-    setBooking(selectedBooking || null);
-    setLoading(false);
+    timeoutId = window.setTimeout(() => {
+      setDispute(savedDispute);
+      setReporter(selectedReporter || null);
+      setBooking(selectedBooking || null);
+      setLoading(false);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [disputeId, router]);
 
   if (loading) {
@@ -201,10 +210,7 @@ export default function AdminDisputeDetailsPage() {
                 label="Last updated"
                 value={formatDate(dispute.updatedAt)}
               />
-              <Detail
-                label="Booking reference"
-                value={dispute.bookingId}
-              />
+              <Detail label="Booking reference" value={dispute.bookingId} />
             </section>
 
             <section className="rounded-xl border border-slate-200 p-5">
@@ -250,15 +256,11 @@ export default function AdminDisputeDetailsPage() {
               />
               <Detail
                 label="Pickup date"
-                value={formatDate(
-                  booking?.startDate || booking?.pickupDate
-                )}
+                value={formatDate(booking?.startDate || booking?.pickupDate)}
               />
               <Detail
                 label="Return date"
-                value={formatDate(
-                  booking?.endDate || booking?.returnDate
-                )}
+                value={formatDate(booking?.endDate || booking?.returnDate)}
               />
             </section>
 

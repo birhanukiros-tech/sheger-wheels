@@ -323,13 +323,23 @@ export default function OwnerDashboardPage() {
   }, []);
 
   useEffect(() => {
-    loadDashboard();
+    let cancelled = false;
+
+    const initialLoad = () => {
+      if (!cancelled) {
+        loadDashboard();
+      }
+    };
+
+    Promise.resolve().then(initialLoad);
 
     const refresh = () => loadDashboard();
+
     window.addEventListener("focus", refresh);
     window.addEventListener("storage", refresh);
 
     return () => {
+      cancelled = true;
       window.removeEventListener("focus", refresh);
       window.removeEventListener("storage", refresh);
     };

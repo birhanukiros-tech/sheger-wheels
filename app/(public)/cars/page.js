@@ -1,7 +1,7 @@
-
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import carsData from "@/data/cars.json";
 import { createCarSlug } from "@/lib/car-slug";
@@ -56,18 +56,26 @@ export default function CarsPage() {
   }, []);
 
   useEffect(() => {
-    refreshCars();
+    let timeoutId;
 
-    // Refresh when the page becomes visible again after owner edits.
     const handleFocus = () => refreshCars();
+
     const handleStorage = (event) => {
-      if (!event.key || event.key === STORAGE_KEY) refreshCars();
+      if (!event.key || event.key === STORAGE_KEY) {
+        refreshCars();
+      }
     };
 
-    window.addEventListener("focus", handleFocus);
-    window.addEventListener("storage", handleStorage);
+    timeoutId = window.setTimeout(() => {
+      refreshCars();
+
+      // Refresh when the page becomes visible again after owner edits.
+      window.addEventListener("focus", handleFocus);
+      window.addEventListener("storage", handleStorage);
+    }, 0);
 
     return () => {
+      window.clearTimeout(timeoutId);
       window.removeEventListener("focus", handleFocus);
       window.removeEventListener("storage", handleStorage);
     };
@@ -137,7 +145,10 @@ export default function CarsPage() {
 
         <div className="mt-8 rounded-2xl border border-[#E5EAF1] bg-white p-4 sm:p-5">
           <div>
-            <label htmlFor="car-search" className="mb-2 block text-sm font-semibold text-[#252A34]">
+            <label
+              htmlFor="car-search"
+              className="mb-2 block text-sm font-semibold text-[#252A34]"
+            >
               Search cars
             </label>
             <input
@@ -152,7 +163,10 @@ export default function CarsPage() {
 
           <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
-              <label htmlFor="transmission" className="mb-2 block text-sm font-semibold text-[#252A34]">
+              <label
+                htmlFor="transmission"
+                className="mb-2 block text-sm font-semibold text-[#252A34]"
+              >
                 Transmission
               </label>
               <select
@@ -163,13 +177,18 @@ export default function CarsPage() {
               >
                 <option value="all">All transmissions</option>
                 {transmissions.map((type) => (
-                  <option key={type} value={type}>{type}</option>
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label htmlFor="min-price" className="mb-2 block text-sm font-semibold text-[#252A34]">
+              <label
+                htmlFor="min-price"
+                className="mb-2 block text-sm font-semibold text-[#252A34]"
+              >
                 Minimum price (ETB/day)
               </label>
               <input
@@ -184,7 +203,10 @@ export default function CarsPage() {
             </div>
 
             <div>
-              <label htmlFor="max-price" className="mb-2 block text-sm font-semibold text-[#252A34]">
+              <label
+                htmlFor="max-price"
+                className="mb-2 block text-sm font-semibold text-[#252A34]"
+              >
                 Maximum price (ETB/day)
               </label>
               <input
@@ -218,7 +240,8 @@ export default function CarsPage() {
             {filteredCars.map((car) => {
               const detailsHref = getCarHref(car);
               const price = Number(car.dailyPrice ?? car.pricePerDay ?? 0);
-              const name = `${car.year || ""} ${car.make || ""} ${car.model || ""}`.trim();
+              const name =
+                `${car.year || ""} ${car.make || ""} ${car.model || ""}`.trim();
 
               return (
                 <article
@@ -230,13 +253,15 @@ export default function CarsPage() {
                     className="group flex flex-1 flex-col focus-visible:outline-offset-[-3px]"
                     aria-label={`View ${name}`}
                   >
-                    <div className="h-52 shrink-0 overflow-hidden bg-[#F4F7FB]">
+                    <div className="relative h-52 shrink-0 overflow-hidden bg-[#F4F7FB]">
                       {car.image ? (
-                        <img
+                        <Image
                           src={car.image}
                           alt={name}
-                          loading="lazy"
-                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          fill
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          className="object-cover transition-transform duration-300 group-hover:scale-105"
+                          unoptimized
                         />
                       ) : (
                         <div className="flex h-full items-center justify-center text-sm text-[#667085]">
@@ -253,7 +278,8 @@ export default function CarsPage() {
                         {car.make} {car.model}
                       </h2>
                       <p className="mt-2 line-clamp-2 min-h-12 text-sm leading-6 text-[#667085]">
-                        {car.description || "Contact the owner for more details."}
+                        {car.description ||
+                          "Contact the owner for more details."}
                       </p>
 
                       <div className="mt-auto pt-4">
@@ -266,13 +292,19 @@ export default function CarsPage() {
 
                         <div className="mt-4 flex min-h-[62px] flex-wrap content-start gap-2 border-t border-[#E5EAF1] pt-4 text-xs text-[#667085]">
                           {car.seats && (
-                            <span className="rounded-md bg-[#F4F7FB] px-2.5 py-1.5">{car.seats} seats</span>
+                            <span className="rounded-md bg-[#F4F7FB] px-2.5 py-1.5">
+                              {car.seats} seats
+                            </span>
                           )}
                           {car.transmission && (
-                            <span className="rounded-md bg-[#F4F7FB] px-2.5 py-1.5 capitalize">{car.transmission}</span>
+                            <span className="rounded-md bg-[#F4F7FB] px-2.5 py-1.5 capitalize">
+                              {car.transmission}
+                            </span>
                           )}
                           {car.color && (
-                            <span className="rounded-md bg-[#F4F7FB] px-2.5 py-1.5">{car.color}</span>
+                            <span className="rounded-md bg-[#F4F7FB] px-2.5 py-1.5">
+                              {car.color}
+                            </span>
                           )}
                         </div>
 

@@ -1,8 +1,8 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { getCurrentUser } from "@/lib/auth";
 import { getBookingsByRenter } from "@/lib/bookings";
 import carsData from "@/data/cars.json";
@@ -84,13 +84,26 @@ export default function RenterDashboardPage() {
   const [today, setToday] = useState("");
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
-    setUser(currentUser);
-    setToday(getToday());
+    let cancelled = false;
 
-    if (currentUser?.id) {
-      setBookings(getBookingsByRenter(currentUser.id));
-    }
+    const initializeDashboard = () => {
+      if (cancelled) return;
+
+      const currentUser = getCurrentUser();
+
+      setUser(currentUser);
+      setToday(getToday());
+
+      if (currentUser?.id) {
+        setBookings(getBookingsByRenter(currentUser.id));
+      }
+    };
+
+    Promise.resolve().then(initializeDashboard);
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const validBookings = Array.isArray(bookings) ? bookings : [];
@@ -146,10 +159,30 @@ export default function RenterDashboardPage() {
         </div>
 
         <div className="mb-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard title="Total bookings" value={validBookings.length} description="All your saved rental bookings" symbol="▤" />
-          <StatCard title="Upcoming rentals" value={upcomingBookings.length} description="Pending, confirmed, or active rentals" symbol="▦" />
-          <StatCard title="Active rentals" value={activeCount} description="Rentals currently marked active" symbol="🚗" />
-          <StatCard title="Completed rentals" value={completedCount} description="Rentals marked as completed" symbol="✓" />
+          <StatCard
+            title="Total bookings"
+            value={validBookings.length}
+            description="All your saved rental bookings"
+            symbol="▤"
+          />
+          <StatCard
+            title="Upcoming rentals"
+            value={upcomingBookings.length}
+            description="Pending, confirmed, or active rentals"
+            symbol="▦"
+          />
+          <StatCard
+            title="Active rentals"
+            value={activeCount}
+            description="Rentals currently marked active"
+            symbol="🚗"
+          />
+          <StatCard
+            title="Completed rentals"
+            value={completedCount}
+            description="Rentals marked as completed"
+            symbol="✓"
+          />
         </div>
 
         <div className="grid items-start gap-8 lg:grid-cols-[1.4fr_1fr]">
@@ -157,10 +190,17 @@ export default function RenterDashboardPage() {
             <section>
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-xl font-bold text-foreground">Upcoming rentals</h2>
-                  <p className="mt-1 text-sm text-muted">Your next rental journeys</p>
+                  <h2 className="text-xl font-bold text-foreground">
+                    Upcoming rentals
+                  </h2>
+                  <p className="mt-1 text-sm text-muted">
+                    Your next rental journeys
+                  </p>
                 </div>
-                <Link href="/bookings" className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-primary hover:underline">
+                <Link
+                  href="/bookings"
+                  className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-primary hover:underline"
+                >
                   All bookings <span aria-hidden="true">→</span>
                 </Link>
               </div>
@@ -171,30 +211,52 @@ export default function RenterDashboardPage() {
                     const car = getCar(booking.carId);
 
                     return (
-                      <article key={booking.id} className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+                      <article
+                        key={booking.id}
+                        className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm"
+                      >
                         <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
                           {car?.image ? (
-                            <img src={car.image} alt={getCarName(booking.carId)} className="h-32 w-full rounded-xl bg-slate-100 object-cover sm:h-24 sm:w-32" />
+                            <div className="relative h-32 w-full shrink-0 overflow-hidden rounded-xl bg-slate-100 sm:h-24 sm:w-32">
+                              <Image
+                                src={car.image}
+                                alt={getCarName(booking.carId)}
+                                fill
+                                sizes="(max-width: 640px) 100vw, 128px"
+                                className="object-cover"
+                                unoptimized
+                              />
+                            </div>
                           ) : (
-                            <div className="flex h-24 w-full items-center justify-center rounded-xl bg-blue-50 text-3xl text-primary sm:w-32">🚗</div>
+                            <div className="flex h-24 w-full items-center justify-center rounded-xl bg-blue-50 text-3xl text-primary sm:w-32">
+                              🚗
+                            </div>
                           )}
 
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="font-bold text-foreground">{getCarName(booking.carId)}</h3>
-                              <span className={`rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${getStatusStyle(booking.status)}`}>
+                              <h3 className="font-bold text-foreground">
+                                {getCarName(booking.carId)}
+                              </h3>
+                              <span
+                                className={`rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${getStatusStyle(booking.status)}`}
+                              >
                                 {booking.status}
                               </span>
                             </div>
                             <p className="mt-2 text-sm text-muted">
-                              {formatDate(booking.startDate)} – {formatDate(booking.endDate)}
+                              {formatDate(booking.startDate)} –{" "}
+                              {formatDate(booking.endDate)}
                             </p>
                             <p className="mt-2 text-sm font-semibold text-foreground">
                               {currencyFormatter.format(booking.totalPrice ?? 0)}
                             </p>
                           </div>
 
-                          <Link href={`/bookings/${booking.id}`} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-semibold text-foreground transition hover:border-primary hover:text-primary">
+                          <Link
+                            href={`/bookings/${booking.id}`}
+                            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-semibold text-foreground transition hover:border-primary hover:text-primary"
+                          >
                             Details →
                           </Link>
                         </div>
@@ -204,12 +266,20 @@ export default function RenterDashboardPage() {
                 </div>
               ) : (
                 <div className="rounded-2xl border border-dashed border-border bg-white px-6 py-10 text-center">
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-2xl text-primary">▦</div>
-                  <h3 className="mt-4 font-bold text-foreground">No upcoming rentals</h3>
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-2xl text-primary">
+                    ▦
+                  </div>
+                  <h3 className="mt-4 font-bold text-foreground">
+                    No upcoming rentals
+                  </h3>
                   <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted">
-                    Once you make a booking, your upcoming rental details will appear here.
+                    Once you make a booking, your upcoming rental details will
+                    appear here.
                   </p>
-                  <Link href="/cars" className="mt-5 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-hover">
+                  <Link
+                    href="/cars"
+                    className="mt-5 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-hover"
+                  >
                     Browse available cars →
                   </Link>
                 </div>
@@ -218,35 +288,66 @@ export default function RenterDashboardPage() {
 
             <section>
               <div className="mb-4">
-                <h2 className="text-xl font-bold text-foreground">Recent activity</h2>
-                <p className="mt-1 text-sm text-muted">Your latest booking history</p>
+                <h2 className="text-xl font-bold text-foreground">
+                  Recent activity
+                </h2>
+                <p className="mt-1 text-sm text-muted">
+                  Your latest booking history
+                </p>
               </div>
 
               <div className="overflow-hidden rounded-2xl border border-border bg-white">
                 {recentBookings.length > 0 ? (
                   recentBookings.map((booking, index) => (
-                    <div key={booking.id} className={`flex items-center gap-3 p-4 sm:p-5 ${index > 0 ? "border-t border-border" : ""}`}>
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-lg text-muted">◷</div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-foreground">{getCarName(booking.carId)}</p>
-                        <p className="mt-1 text-xs text-muted">Booked {formatDate((booking.createdAt || "").slice(0, 10))}</p>
+                    <div
+                      key={booking.id}
+                      className={`flex items-center gap-3 p-4 sm:p-5 ${index > 0 ? "border-t border-border" : ""}`}
+                    >
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-lg text-muted">
+                        ◷
                       </div>
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${getStatusStyle(booking.status)}`}>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-foreground">
+                          {getCarName(booking.carId)}
+                        </p>
+                        <p className="mt-1 text-xs text-muted">
+                          Booked{" "}
+                          {formatDate((booking.createdAt || "").slice(0, 10))}
+                        </p>
+                      </div>
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${getStatusStyle(booking.status)}`}
+                      >
                         {booking.status}
                       </span>
-                      <Link href={`/bookings/${booking.id}`} aria-label={`View booking for ${getCarName(booking.carId)}`} className="rounded-lg p-2 text-muted transition hover:bg-blue-50 hover:text-primary">→</Link>
+                      <Link
+                        href={`/bookings/${booking.id}`}
+                        aria-label={`View booking for ${getCarName(booking.carId)}`}
+                        className="rounded-lg p-2 text-muted transition hover:bg-blue-50 hover:text-primary"
+                      >
+                        →
+                      </Link>
                     </div>
                   ))
                 ) : (
                   <div className="px-6 py-8 text-center">
-                    <p className="font-semibold text-foreground">No booking activity yet</p>
-                    <p className="mt-2 text-sm text-muted">Your booking history will appear here.</p>
+                    <p className="font-semibold text-foreground">
+                      No booking activity yet
+                    </p>
+                    <p className="mt-2 text-sm text-muted">
+                      Your booking history will appear here.
+                    </p>
                   </div>
                 )}
 
                 {validBookings.length > 4 && (
                   <div className="border-t border-border p-4 text-center">
-                    <Link href="/bookings" className="text-sm font-semibold text-primary hover:underline">View all booking history</Link>
+                    <Link
+                      href="/bookings"
+                      className="text-sm font-semibold text-primary hover:underline"
+                    >
+                      View all booking history
+                    </Link>
                   </div>
                 )}
               </div>
@@ -255,24 +356,46 @@ export default function RenterDashboardPage() {
 
           <aside className="space-y-6">
             <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-foreground">Quick actions</h2>
-              <p className="mt-1 text-sm text-muted">Get where you need to go</p>
+              <h2 className="text-lg font-bold text-foreground">
+                Quick actions
+              </h2>
+              <p className="mt-1 text-sm text-muted">
+                Get where you need to go
+              </p>
 
               <div className="mt-5 space-y-3">
-                <Link href="/cars" className="flex items-center gap-3 rounded-xl border border-border p-4 transition hover:border-primary hover:bg-blue-50/50">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-xl text-primary">🚗</span>
+                <Link
+                  href="/cars"
+                  className="flex items-center gap-3 rounded-xl border border-border p-4 transition hover:border-primary hover:bg-blue-50/50"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-xl text-primary">
+                    🚗
+                  </span>
                   <span className="flex-1">
-                    <span className="block text-sm font-semibold text-foreground">Browse cars</span>
-                    <span className="mt-1 block text-xs text-muted">Find your next ride</span>
+                    <span className="block text-sm font-semibold text-foreground">
+                      Browse cars
+                    </span>
+                    <span className="mt-1 block text-xs text-muted">
+                      Find your next ride
+                    </span>
                   </span>
                   <span className="text-muted">→</span>
                 </Link>
 
-                <Link href="/bookings" className="flex items-center gap-3 rounded-xl border border-border p-4 transition hover:border-primary hover:bg-blue-50/50">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-xl text-primary">▦</span>
+                <Link
+                  href="/bookings"
+                  className="flex items-center gap-3 rounded-xl border border-border p-4 transition hover:border-primary hover:bg-blue-50/50"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-xl text-primary">
+                    ▦
+                  </span>
                   <span className="flex-1">
-                    <span className="block text-sm font-semibold text-foreground">Manage bookings</span>
-                    <span className="mt-1 block text-xs text-muted">View rental details</span>
+                    <span className="block text-sm font-semibold text-foreground">
+                      Manage bookings
+                    </span>
+                    <span className="mt-1 block text-xs text-muted">
+                      View rental details
+                    </span>
                   </span>
                   <span className="text-muted">→</span>
                 </Link>
@@ -280,33 +403,60 @@ export default function RenterDashboardPage() {
             </section>
 
             <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-foreground">Booking overview</h2>
+              <h2 className="text-lg font-bold text-foreground">
+                Booking overview
+              </h2>
               <div className="mt-5 space-y-4">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-2 text-sm text-muted"><span className="h-2.5 w-2.5 rounded-full bg-amber-400" /> Awaiting confirmation</span>
-                  <span className="font-bold text-foreground">{pendingCount}</span>
+                  <span className="flex items-center gap-2 text-sm text-muted">
+                    <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+                    Awaiting confirmation
+                  </span>
+                  <span className="font-bold text-foreground">
+                    {pendingCount}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-2 text-sm text-muted"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Active rentals</span>
-                  <span className="font-bold text-foreground">{activeCount}</span>
+                  <span className="flex items-center gap-2 text-sm text-muted">
+                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                    Active rentals
+                  </span>
+                  <span className="font-bold text-foreground">
+                    {activeCount}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-2 text-sm text-muted"><span className="h-2.5 w-2.5 rounded-full bg-slate-400" /> Completed rentals</span>
-                  <span className="font-bold text-foreground">{completedCount}</span>
+                  <span className="flex items-center gap-2 text-sm text-muted">
+                    <span className="h-2.5 w-2.5 rounded-full bg-slate-400" />
+                    Completed rentals
+                  </span>
+                  <span className="font-bold text-foreground">
+                    {completedCount}
+                  </span>
                 </div>
               </div>
-              <Link href="/bookings" className="mt-6 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground transition hover:border-primary hover:text-primary">
+              <Link
+                href="/bookings"
+                className="mt-6 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground transition hover:border-primary hover:text-primary"
+              >
                 View all bookings →
               </Link>
             </section>
 
             <div className="rounded-2xl bg-slate-900 p-6 text-white">
-              <div className="text-2xl" aria-hidden="true">📍</div>
-              <h2 className="mt-4 text-lg font-bold">Ready for your next journey?</h2>
+              <div className="text-2xl" aria-hidden="true">
+                📍
+              </div>
+              <h2 className="mt-4 text-lg font-bold">
+                Ready for your next journey?
+              </h2>
               <p className="mt-2 text-sm leading-6 text-slate-300">
                 Explore available cars and choose the one that suits your plans.
               </p>
-              <Link href="/cars" className="mt-5 inline-flex items-center gap-2 font-semibold text-white transition hover:text-blue-300">
+              <Link
+                href="/cars"
+                className="mt-5 inline-flex items-center gap-2 font-semibold text-white transition hover:text-blue-300"
+              >
                 Find your car →
               </Link>
             </div>

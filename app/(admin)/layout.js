@@ -11,30 +11,39 @@ export default function AdminLayout({ children }) {
   const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
+    let timeoutId;
+
     // Allow the admin sign-in redirect page to load without a session.
     if (pathname === "/admin/signin") {
-      setIsAuthorized(true);
-      return;
+      timeoutId = window.setTimeout(() => {
+        setIsAuthorized(true);
+      }, 0);
+
+      return () => window.clearTimeout(timeoutId);
     }
 
     // Recheck authorization whenever the route changes.
-    setIsAuthorized(false);
+    timeoutId = window.setTimeout(() => {
+      setIsAuthorized(false);
 
-    const user = getCurrentUser();
+      const user = getCurrentUser();
 
-    if (!user) {
-      router.replace(
-        `/admin/signin?next=${encodeURIComponent(pathname || "/admin")}`,
-      );
-      return;
-    }
+      if (!user) {
+        router.replace(
+          `/admin/signin?next=${encodeURIComponent(pathname || "/admin")}`,
+        );
+        return;
+      }
 
-    if (user.role !== "admin") {
-      router.replace("/");
-      return;
-    }
+      if (user.role !== "admin") {
+        router.replace("/");
+        return;
+      }
 
-    setIsAuthorized(true);
+      setIsAuthorized(true);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [pathname, router]);
 
   if (!isAuthorized) {
