@@ -1,6 +1,8 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { getCurrentUser } from "@/lib/auth";
@@ -79,24 +81,41 @@ function StatCard({ title, value, description, symbol }) {
 }
 
 export default function RenterDashboardPage() {
+  const router = useRouter();
+
   const [user, setUser] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [today, setToday] = useState("");
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
     const initializeDashboard = () => {
+      const currentUser = getCurrentUser();
+
       if (cancelled) return;
 
-      const currentUser = getCurrentUser();
+      if (!currentUser) {
+        router.replace("/signin?next=/dashboard");
+        return;
+      }
+
+      if (currentUser.role !== "renter") {
+        router.replace(
+          currentUser.role === "owner"
+            ? "/owner"
+            : currentUser.role === "admin"
+              ? "/admin"
+              : "/"
+        );
+        return;
+      }
 
       setUser(currentUser);
       setToday(getToday());
-
-      if (currentUser?.id) {
-        setBookings(getBookingsByRenter(currentUser.id));
-      }
+      setBookings(getBookingsByRenter(currentUser.id));
+      setAuthChecked(true);
     };
 
     Promise.resolve().then(initializeDashboard);
@@ -104,7 +123,7 @@ export default function RenterDashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [router]);
 
   const validBookings = Array.isArray(bookings) ? bookings : [];
 
@@ -132,6 +151,16 @@ export default function RenterDashboardPage() {
   const pendingCount = validBookings.filter(
     (booking) => booking.status === "pending"
   ).length;
+
+  if (!authChecked) {
+    return (
+      <main className="flex min-h-[60vh] items-center justify-center bg-surface px-4">
+        <p className="text-sm font-medium text-muted">
+          Checking renter access...
+        </p>
+      </main>
+    );
+  }
 
   return (
     <section className="min-h-[70vh] bg-surface px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
