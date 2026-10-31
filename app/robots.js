@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
-
 export default function robots() {
+  const siteUrl = "https://sheger-wheels-two.vercel.app";
+
   return {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/cars"],
+        allow: ["/", "/cars", "/cars/"],
         disallow: [
           "/signin",
           "/signup",
@@ -17,6 +17,7 @@ export default function robots() {
         ],
       },
     ],
-    sitemap: "http://localhost:3000/sitemap.xml",
+    sitemap: `${siteUrl}/sitemap.xml`,
+    host: siteUrl,
   };
 }

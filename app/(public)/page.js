@@ -4,20 +4,39 @@ import Link from "next/link";
 import cars from "@/data/cars.json";
 import { createCarSlug } from "@/lib/car-slug";
 
+const heroImage = "/images/hero/hero-car.jpg";
 
 export const metadata = {
   title: "Find Cars for Rent in Addis Ababa",
   description:
     "Explore Sheggar Wheels and discover cars available for rent in Addis Ababa, Ethiopia. Compare demo vehicles, explore prices, and find a ride for your next journey.",
+
   alternates: {
     canonical: "/",
   },
+
   openGraph: {
     title: "Find Cars for Rent in Addis Ababa | Sheggar Wheels",
     description:
       "Explore available demo cars, compare prices, and discover your next ride in Addis Ababa.",
     url: "/",
     type: "website",
+    images: [
+      {
+        url: heroImage,
+        width: 1200,
+        height: 800,
+        alt: "Find your next ride with Sheggar Wheels",
+      },
+    ],
+  },
+
+  twitter: {
+    card: "summary_large_image",
+    title: "Find Cars for Rent in Addis Ababa | Sheggar Wheels",
+    description:
+      "Explore available demo cars, compare prices, and discover your next ride in Addis Ababa.",
+    images: [heroImage],
   },
 };
 
@@ -76,7 +95,7 @@ export default function Home() {
           <div className="min-w-0">
             <div className="overflow-hidden rounded-2xl bg-[#F4F7FB] p-2 sm:p-3">
               <Image
-                src="/images/hero/hero-car.jpg"
+                src={heroImage}
                 alt="Car ready for a journey"
                 width={1200}
                 height={800}

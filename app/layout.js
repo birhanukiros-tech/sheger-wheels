@@ -1,3 +1,4 @@
+
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -12,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  metadataBase: new URL("http://localhost:3000"),
+  metadataBase: new URL("https://sheger-wheels-two.vercel.app"),
 
   title: {
     default: "Sheggar Wheels | Find Your Next Ride",
@@ -31,6 +32,14 @@ export const metadata = {
     siteName: "Sheggar Wheels",
     locale: "en_ET",
     type: "website",
+    images: [
+      {
+        url: "/images/hero/hero-car.jpg",
+        width: 1200,
+        height: 800,
+        alt: "Sheggar Wheels car rental marketplace",
+      },
+    ],
   },
 
   twitter: {
@@ -38,6 +47,7 @@ export const metadata = {
     title: "Sheggar Wheels | Find Your Next Ride",
     description:
       "Discover cars available for rent in Addis Ababa with Sheggar Wheels.",
+    images: ["/images/hero/hero-car.jpg"],
   },
 
   robots: {

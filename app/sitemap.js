@@ -1,7 +1,7 @@
 import cars from "@/data/cars.json";
 import { createCarSlug } from "@/lib/car-slug";
 
-const BASE_URL = "http://localhost:3000";
+const BASE_URL = "https://sheger-wheels-two.vercel.app";
 
 export default function sitemap() {
   const publicPages = [
