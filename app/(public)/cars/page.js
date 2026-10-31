@@ -18,10 +18,10 @@ function getPublicCars() {
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
     const ownerCars = Array.isArray(stored) ? stored : [];
-
     const merged = new Map();
 
     carsData.forEach((car) => merged.set(getCarId(car), car));
+
     ownerCars.forEach((car) => {
       if (car?.id) merged.set(getCarId(car), car);
     });
@@ -62,6 +62,7 @@ export default function CarsPage() {
   const searchParams = useSearchParams();
 
   const [cars, setCars] = useState([]);
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
 
   // The URL is the source of truth for filters and pagination.
   const search = searchParams.get("search") || "";
@@ -75,6 +76,16 @@ export default function CarsPage() {
   const requestedPage = Number(searchParams.get("page") || 1);
   const page =
     Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+
+  const hasActiveFilters =
+    Boolean(search) ||
+    transmission !== "all" ||
+    fuelType !== "all" ||
+    seats !== "all" ||
+    Boolean(minPrice) ||
+    Boolean(maxPrice);
+
+  const isFiltersOpen = showMoreFilters || Boolean(minPrice || maxPrice);
 
   const refreshCars = useCallback(() => {
     setCars(getPublicCars());
@@ -124,6 +135,7 @@ export default function CarsPage() {
       });
 
       const query = params.toString();
+
       router.replace(query ? `/cars?${query}` : "/cars", {
         scroll: false,
       });
@@ -257,213 +269,277 @@ export default function CarsPage() {
 
   function clearFilters() {
     router.replace("/cars", { scroll: false });
+    setShowMoreFilters(false);
   }
 
   return (
     <section className="min-h-screen bg-[#F4F7FB]">
-      <div className="mx-auto max-w-[1200px] px-5 py-10 sm:px-8 sm:py-14">
+      <div className="mx-auto max-w-[1200px] px-5 pb-10 pt-3 sm:px-8 sm:pb-12 sm:pt-4">
+        {/* Page heading */}
         <div className="max-w-2xl">
-          <p className="text-sm font-semibold uppercase tracking-wider text-[#0866F5]">
+          <p className="text-xs font-semibold uppercase tracking-wider text-[#0866F5]">
             Find your next ride
           </p>
 
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-[#252A34] sm:text-4xl">
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-[#252A34] sm:text-4xl">
             Browse Cars
           </h1>
 
-          <p className="mt-3 leading-7 text-[#667085]">
+          <p className="mt-2 text-sm leading-6 text-[#667085]">
             Explore available vehicles and find an option that suits your next
             journey in Addis Ababa.
           </p>
         </div>
 
-        {/* Search and filters */}
-        <div className="mt-8 rounded-2xl border border-[#E5EAF1] bg-white p-4 sm:p-5">
-          <div>
-            <label
-              htmlFor="car-search"
-              className="mb-2 block text-sm font-semibold text-[#252A34]"
-            >
-              Search cars
-            </label>
-
-            <input
-              id="car-search"
-              type="search"
-              value={search}
-              onChange={(event) =>
-                handleFilterChange("search", event.target.value)
-              }
-              placeholder="Search make, model, or location..."
-              className="min-h-12 w-full rounded-lg border border-[#E5EAF1] px-4 text-sm text-[#252A34] outline-none transition focus:border-[#0866F5] focus:ring-2 focus:ring-blue-100"
-            />
-          </div>
-
-          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div>
-              <label
-                htmlFor="transmission"
-                className="mb-2 block text-sm font-semibold text-[#252A34]"
-              >
-                Transmission
-              </label>
-
-              <select
-                id="transmission"
-                value={transmission}
-                onChange={(event) =>
-                  handleFilterChange("transmission", event.target.value)
-                }
-                className="min-h-12 w-full rounded-lg border border-[#E5EAF1] bg-white px-3 text-sm text-[#252A34] outline-none focus:border-[#0866F5] focus:ring-2 focus:ring-blue-100"
-              >
-                <option value="all">All transmissions</option>
-
-                {transmissions.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label
-                htmlFor="fuel"
-                className="mb-2 block text-sm font-semibold text-[#252A34]"
-              >
-                Fuel type
-              </label>
-
-              <select
-                id="fuel"
-                value={fuelType}
-                onChange={(event) =>
-                  handleFilterChange("fuel", event.target.value)
-                }
-                className="min-h-12 w-full rounded-lg border border-[#E5EAF1] bg-white px-3 text-sm text-[#252A34] outline-none focus:border-[#0866F5] focus:ring-2 focus:ring-blue-100"
-              >
-                <option value="all">All fuel types</option>
-
-                {fuelTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label
-                htmlFor="seats"
-                className="mb-2 block text-sm font-semibold text-[#252A34]"
-              >
-                Number of seats
-              </label>
-
-              <select
-                id="seats"
-                value={seats}
-                onChange={(event) =>
-                  handleFilterChange("seats", event.target.value)
-                }
-                className="min-h-12 w-full rounded-lg border border-[#E5EAF1] bg-white px-3 text-sm text-[#252A34] outline-none focus:border-[#0866F5] focus:ring-2 focus:ring-blue-100"
-              >
-                <option value="all">All seat counts</option>
-
-                {seatOptions.map((count) => (
-                  <option key={count} value={count}>
-                    {count} seats
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label
-                htmlFor="min-price"
-                className="mb-2 block text-sm font-semibold text-[#252A34]"
-              >
-                Minimum price (ETB/day)
+        {/* Compact search and filters */}
+        <div className="mt-5 rounded-xl border border-[#E5EAF1] bg-white p-3 sm:p-4">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="min-w-0 flex-1">
+              <label htmlFor="car-search" className="sr-only">
+                Search cars
               </label>
 
               <input
-                id="min-price"
-                type="number"
-                min="0"
-                value={minPrice}
+                id="car-search"
+                type="search"
+                value={search}
                 onChange={(event) =>
-                  handleFilterChange("minPrice", event.target.value)
+                  handleFilterChange("search", event.target.value)
                 }
-                placeholder="e.g. 1000"
-                className="min-h-12 w-full rounded-lg border border-[#E5EAF1] px-3 text-sm text-[#252A34] outline-none focus:border-[#0866F5] focus:ring-2 focus:ring-blue-100"
+                placeholder="Search by make, model, or location..."
+                className="min-h-11 w-full rounded-lg border border-[#E5EAF1] px-3.5 text-sm text-[#252A34] outline-none transition placeholder:text-[#98A2B3] focus:border-[#0866F5] focus:ring-2 focus:ring-blue-100"
               />
             </div>
-
-            <div>
-              <label
-                htmlFor="max-price"
-                className="mb-2 block text-sm font-semibold text-[#252A34]"
-              >
-                Maximum price (ETB/day)
-              </label>
-
-              <input
-                id="max-price"
-                type="number"
-                min="0"
-                value={maxPrice}
-                onChange={(event) =>
-                  handleFilterChange("maxPrice", event.target.value)
-                }
-                placeholder="e.g. 5000"
-                className="min-h-12 w-full rounded-lg border border-[#E5EAF1] px-3 text-sm text-[#252A34] outline-none focus:border-[#0866F5] focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="sort"
-                className="mb-2 block text-sm font-semibold text-[#252A34]"
-              >
-                Sort by
-              </label>
-
-              <select
-                id="sort"
-                value={sort}
-                onChange={(event) =>
-                  handleFilterChange("sort", event.target.value)
-                }
-                className="min-h-12 w-full rounded-lg border border-[#E5EAF1] bg-white px-3 text-sm text-[#252A34] outline-none focus:border-[#0866F5] focus:ring-2 focus:ring-blue-100"
-              >
-                <option value="newest">Default order</option>
-                <option value="price-low">Price: Low to high</option>
-                <option value="price-high">Price: High to low</option>
-                <option value="year-new">Year: Newest first</option>
-                <option value="year-old">Year: Oldest first</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-[#667085]" aria-live="polite">
-              Showing {firstResult}–{lastResult} of {filteredCars.length}{" "}
-              matching cars ({cars.length} available)
-            </p>
 
             <button
               type="button"
-              onClick={clearFilters}
-              className="min-h-11 rounded-lg border border-[#E5EAF1] px-5 text-sm font-semibold text-[#252A34] transition-colors hover:border-[#0866F5] hover:text-[#0866F5]"
+              onClick={() => setShowMoreFilters((current) => !current)}
+              aria-expanded={isFiltersOpen ? "▲" : "▼"}
+              aria-controls="car-filters-panel"
+              className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg border px-5 text-sm font-semibold transition ${
+                isFiltersOpen || hasActiveFilters
+                  ? "border-[#0866F5] bg-blue-50 text-[#0866F5]"
+                  : "border-[#E5EAF1] bg-white text-[#252A34] hover:border-[#0866F5] hover:text-[#0866F5]"
+              }`}
             >
-              Clear all filters
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 20 20"
+                fill="none"
+                className="h-4 w-4"
+              >
+                <path
+                  d="M3 5h14M5.5 10h9M8 15h4"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                />
+              </svg>
+              Filters
+              {hasActiveFilters && (
+                <span
+                  aria-label="Filters active"
+                  className="h-2 w-2 rounded-full bg-[#0866F5]"
+                />
+              )}
+              <span aria-hidden="true" className="text-xs">
+               aria-expanded={isFiltersOpen}
+              </span>
             </button>
+          </div>
+
+          {/* Expandable filters */}
+          {isFiltersOpen && (
+            <div
+              id="car-filters-panel"
+              className="mt-4 border-t border-[#E5EAF1] pt-4"
+            >
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div>
+                  <label
+                    htmlFor="transmission"
+                    className="mb-1.5 block text-xs font-semibold text-[#252A34]"
+                  >
+                    Transmission
+                  </label>
+
+                  <select
+                    id="transmission"
+                    value={transmission}
+                    onChange={(event) =>
+                      handleFilterChange("transmission", event.target.value)
+                    }
+                    className="min-h-10 w-full rounded-lg border border-[#E5EAF1] bg-white px-3 text-sm text-[#252A34] outline-none focus:border-[#0866F5] focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="all">All transmissions</option>
+
+                    {transmissions.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="fuel"
+                    className="mb-1.5 block text-xs font-semibold text-[#252A34]"
+                  >
+                    Fuel type
+                  </label>
+
+                  <select
+                    id="fuel"
+                    value={fuelType}
+                    onChange={(event) =>
+                      handleFilterChange("fuel", event.target.value)
+                    }
+                    className="min-h-10 w-full rounded-lg border border-[#E5EAF1] bg-white px-3 text-sm text-[#252A34] outline-none focus:border-[#0866F5] focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="all">All fuel types</option>
+
+                    {fuelTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="seats"
+                    className="mb-1.5 block text-xs font-semibold text-[#252A34]"
+                  >
+                    Number of seats
+                  </label>
+
+                  <select
+                    id="seats"
+                    value={seats}
+                    onChange={(event) =>
+                      handleFilterChange("seats", event.target.value)
+                    }
+                    className="min-h-10 w-full rounded-lg border border-[#E5EAF1] bg-white px-3 text-sm text-[#252A34] outline-none focus:border-[#0866F5] focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="all">All seat counts</option>
+
+                    {seatOptions.map((count) => (
+                      <option key={count} value={count}>
+                        {count} seats
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label
+                      htmlFor="min-price"
+                      className="mb-1.5 block text-xs font-semibold text-[#252A34]"
+                    >
+                      Min. price
+                    </label>
+
+                    <input
+                      id="min-price"
+                      type="number"
+                      min="0"
+                      value={minPrice}
+                      onChange={(event) =>
+                        handleFilterChange("minPrice", event.target.value)
+                      }
+                      placeholder="ETB"
+                      className="min-h-10 w-full rounded-lg border border-[#E5EAF1] px-2.5 text-sm text-[#252A34] outline-none focus:border-[#0866F5] focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="max-price"
+                      className="mb-1.5 block text-xs font-semibold text-[#252A34]"
+                    >
+                      Max. price
+                    </label>
+
+                    <input
+                      id="max-price"
+                      type="number"
+                      min="0"
+                      value={maxPrice}
+                      onChange={(event) =>
+                        handleFilterChange("maxPrice", event.target.value)
+                      }
+                      placeholder="ETB"
+                      className="min-h-10 w-full rounded-lg border border-[#E5EAF1] px-2.5 text-sm text-[#252A34] outline-none focus:border-[#0866F5] focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {hasActiveFilters && (
+                <div className="mt-3 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="min-h-9 rounded-lg px-2 text-sm font-medium text-[#667085] transition hover:text-[#0866F5]"
+                  >
+                    Clear all filters
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Results count and sorting */}
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p
+            className="text-sm text-[#667085]"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            Showing{" "}
+            <span className="font-semibold text-[#252A34]">
+              {firstResult}–{lastResult}
+            </span>{" "}
+            of{" "}
+            <span className="font-semibold text-[#252A34]">
+              {filteredCars.length}
+            </span>{" "}
+            matching cars
+            <span className="text-[#98A2B3]"> ({cars.length} available)</span>
+          </p>
+
+          <div className="flex items-center gap-2 sm:justify-end">
+            <label
+              htmlFor="sort"
+              className="shrink-0 text-xs font-semibold text-[#667085]"
+            >
+              Sort by
+            </label>
+
+            <select
+              id="sort"
+              value={sort}
+              onChange={(event) =>
+                handleFilterChange("sort", event.target.value)
+              }
+              className="min-h-10 w-full rounded-lg border border-[#E5EAF1] bg-white px-3 text-sm text-[#252A34] outline-none focus:border-[#0866F5] focus:ring-2 focus:ring-blue-100 sm:w-auto"
+            >
+              <option value="newest">Default order</option>
+              <option value="price-low">Price: Low to high</option>
+              <option value="price-high">Price: High to low</option>
+              <option value="year-new">Year: Newest first</option>
+              <option value="year-old">Year: Oldest first</option>
+            </select>
           </div>
         </div>
 
         {/* Car listings */}
         {paginatedCars.length > 0 ? (
-          <div className="mt-8 grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-3 grid items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {paginatedCars.map((car) => {
               const detailsHref = getCarHref(car, currentPage);
               const price = getPrice(car);
@@ -474,13 +550,14 @@ export default function CarsPage() {
               return (
                 <article
                   key={car.id}
-                  className="flex h-full flex-col overflow-hidden rounded-2xl border border-[#E5EAF1] bg-white transition-shadow hover:shadow-lg"
+                  className="flex h-full flex-col overflow-hidden rounded-xl border border-[#E5EAF1] bg-white transition-shadow hover:shadow-lg"
                 >
                   <Link
                     href={detailsHref}
                     className="group flex flex-1 flex-col focus-visible:outline-offset-[-3px]"
                     aria-label={`View ${name}`}
                   >
+                    {/* Keep the existing image height */}
                     <div className="relative h-52 shrink-0 overflow-hidden bg-[#F4F7FB]">
                       {car.image ? (
                         <Image
@@ -498,60 +575,51 @@ export default function CarsPage() {
                       )}
                     </div>
 
-                    <div className="flex flex-1 flex-col p-5">
+                    {/* Compact card information */}
+                    <div className="flex flex-1 flex-col p-3.5">
                       <p className="text-xs font-medium text-[#667085]">
                         {car.year} · {car.location || "Addis Ababa"}
                       </p>
 
-                      <h2 className="mt-2 min-h-[56px] text-xl font-bold text-[#252A34]">
+                      <h2 className="mt-1 text-lg font-bold leading-6 text-[#252A34]">
                         {car.make} {car.model}
                       </h2>
 
-                      <p className="mt-2 line-clamp-2 min-h-12 text-sm leading-6 text-[#667085]">
-                        {car.description ||
-                          "Contact the owner for more details."}
-                      </p>
+                      <div className="mt-2 flex items-baseline gap-1">
+                        <span className="text-xl font-bold text-[#0866F5]">
+                          ETB {price.toLocaleString("en-US")}
+                        </span>
 
-                      <div className="mt-auto pt-4">
-                        <div className="flex min-h-8 items-baseline gap-1">
-                          <span className="text-xl font-bold text-[#0866F5]">
-                            ETB {price.toLocaleString("en-US")}
+                        <span className="text-xs text-[#667085]">/ day</span>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap gap-1.5 border-t border-[#E5EAF1] pt-3 text-xs text-[#667085]">
+                        {car.seats && (
+                          <span className="rounded-md bg-[#F4F7FB] px-2 py-1.5">
+                            {car.seats} seats
                           </span>
+                        )}
 
-                          <span className="text-sm text-[#667085]">/ day</span>
-                        </div>
+                        {car.transmission && (
+                          <span className="rounded-md bg-[#F4F7FB] px-2 py-1.5 capitalize">
+                            {car.transmission}
+                          </span>
+                        )}
 
-                        <div className="mt-4 flex min-h-[62px] flex-wrap content-start gap-2 border-t border-[#E5EAF1] pt-4 text-xs text-[#667085]">
-                          {car.seats && (
-                            <span className="rounded-md bg-[#F4F7FB] px-2.5 py-1.5">
-                              {car.seats} seats
-                            </span>
-                          )}
-
-                          {car.transmission && (
-                            <span className="rounded-md bg-[#F4F7FB] px-2.5 py-1.5 capitalize">
-                              {car.transmission}
-                            </span>
-                          )}
-
-                          {car.color && (
-                            <span className="rounded-md bg-[#F4F7FB] px-2.5 py-1.5">
-                              {car.color}
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="mt-4 flex min-h-11 items-center justify-center rounded-lg border border-[#0866F5] px-4 py-2 text-sm font-semibold text-[#0866F5] transition-colors group-hover:bg-blue-50">
-                          View Details
-                        </div>
+                        {car.color && (
+                          <span className="rounded-md bg-[#F4F7FB] px-2 py-1.5">
+                            {car.color}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </Link>
 
-                  <div className="px-5 pb-5">
+                  {/* Keep one clear booking action */}
+                  <div className="px-3.5 pb-3.5">
                     <Link
                       href={`/checkout?carId=${encodeURIComponent(car.id)}`}
-                      className="flex min-h-11 w-full items-center justify-center rounded-lg bg-[#0866F5] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#0754C7]"
+                      className="flex min-h-10 w-full items-center justify-center rounded-lg bg-[#0866F5] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#0754C7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0866F5]"
                     >
                       Book Now →
                     </Link>
@@ -561,7 +629,7 @@ export default function CarsPage() {
             })}
           </div>
         ) : (
-          <div className="mt-8 rounded-2xl border border-dashed border-[#D0D7E2] bg-white px-5 py-14 text-center">
+          <div className="mt-4 rounded-xl border border-dashed border-[#D0D7E2] bg-white px-5 py-12 text-center">
             <h2 className="text-lg font-bold text-[#252A34]">No cars found</h2>
 
             <p className="mt-2 text-sm leading-6 text-[#667085]">
@@ -571,7 +639,7 @@ export default function CarsPage() {
             <button
               type="button"
               onClick={clearFilters}
-              className="mt-5 inline-flex min-h-11 items-center justify-center rounded-lg bg-[#0866F5] px-5 py-2 text-sm font-semibold text-white hover:bg-[#0754C7]"
+              className="mt-5 inline-flex min-h-10 items-center justify-center rounded-lg bg-[#0866F5] px-5 py-2 text-sm font-semibold text-white hover:bg-[#0754C7]"
             >
               Clear all filters
             </button>
@@ -582,7 +650,7 @@ export default function CarsPage() {
         {filteredCars.length > 0 && (
           <nav
             aria-label="Car listing pages"
-            className="mt-10 flex flex-wrap items-center justify-center gap-2"
+            className="mt-8 flex flex-wrap items-center justify-center gap-2"
           >
             <button
               type="button"
