@@ -160,7 +160,7 @@ export default function SignInPage() {
         className="pointer-events-none absolute -bottom-28 -left-20 h-72 w-72 rounded-full bg-blue-100/50 blur-3xl"
       />
 
-      <div className="relative w-full max-w-4xl rounded-3xl border border-border bg-white p-6 shadow-xl shadow-slate-200/50 sm:p-10">
+      <div className="relative w-full max-w-3xl rounded-3xl border border-border bg-white p-6 shadow-xl shadow-slate-200/50 sm:p-8 lg:p-9">
         {/* Logo and heading */}
         <div className="mb-8 text-center">
           <div className="mx-auto mb-5 flex h-24 w-24 items-center justify-center rounded-2xl border border-border bg-white p-2 shadow-sm">

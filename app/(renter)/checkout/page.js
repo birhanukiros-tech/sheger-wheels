@@ -6,6 +6,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import dynamic from "next/dynamic";
+import {
+  ArrowLeft,
+  CalendarDays,
+  CarFront,
+  CheckCircle2,
+  CreditCard,
+  MapPin,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
 import cars from "@/data/cars.json";
 import { getCurrentUser } from "@/lib/auth";
 import { createBooking } from "@/lib/bookings";
@@ -13,7 +23,14 @@ import { formatCurrency } from "@/lib/format";
 
 const BookingLocationMap = dynamic(
   () => import("@/components/maps/BookingLocationMap"),
-  { ssr: false }
+  {
+    ssr: false,
+    loading: () => (
+      <div className="mt-7 flex h-[340px] items-center justify-center rounded-2xl border border-[#E5EAF1] bg-[#F4F7FB] text-sm text-[#667085]">
+        Loading location map...
+      </div>
+    ),
+  }
 );
 
 const defaultLocations = {
@@ -113,9 +130,18 @@ function getBlockedDateInRange(startDate, endDate, blockedDates) {
 }
 
 const inputClass =
-  "min-h-12 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 outline-none transition focus:border-[#0866F5] focus:ring-2 focus:ring-blue-100";
+  "min-h-12 w-full rounded-xl border border-[#E5EAF1] bg-white px-4 text-sm text-[#252A34] outline-none transition placeholder:text-[#98A2B3] focus:border-[#0866F5] focus:ring-2 focus:ring-blue-100";
 
-const labelClass = "mb-2 block text-sm font-semibold text-slate-700";
+const labelClass = "mb-2 block text-sm font-semibold text-[#344054]";
+
+const sectionClass =
+  "border-b border-[#E5EAF1] pb-7";
+
+const sectionHeadingClass =
+  "text-lg font-bold text-[#252A34]";
+
+const sectionDescriptionClass =
+  "mt-1.5 text-sm leading-6 text-[#667085]";
 
 const paymentMethods = [
   {
@@ -428,9 +454,9 @@ export default function CheckoutPage() {
 
   if (!authChecked || !carsLoaded) {
     return (
-      <main className="mx-auto max-w-5xl px-4 py-16">
-        <p className="text-center text-slate-500">
-          Checking your account and car…
+      <main className="mx-auto max-w-5xl px-4 py-12">
+        <p className="text-center text-sm text-[#667085]">
+          Checking your account and car...
         </p>
       </main>
     );
@@ -438,19 +464,21 @@ export default function CheckoutPage() {
 
   if (!car) {
     return (
-      <main className="mx-auto max-w-3xl px-4 py-16">
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
-          <h1 className="text-2xl font-bold text-slate-900">
+      <main className="mx-auto max-w-3xl px-4 py-12">
+        <div className="rounded-2xl border border-[#E5EAF1] bg-white p-8 text-center">
+          <h1 className="text-2xl font-bold text-[#252A34]">
             {carId ? "Car not found" : "Choose a car first"}
           </h1>
-          <p className="mt-3 text-slate-600">
+
+          <p className="mt-3 text-sm leading-6 text-[#667085]">
             {carId
               ? "We couldn't find that car. Please choose another listing."
               : "Select a car from our listings before continuing to checkout."}
           </p>
+
           <Link
             href="/cars"
-            className="mt-6 inline-flex rounded-lg bg-[#0866F5] px-5 py-3 font-semibold text-white hover:bg-[#0754C7]"
+            className="mt-6 inline-flex min-h-11 items-center justify-center rounded-lg bg-[#0866F5] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0754C7]"
           >
             Browse cars
           </Link>
@@ -460,103 +488,141 @@ export default function CheckoutPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-10 sm:py-14">
+    <main className="min-h-screen bg-[#F4F7FB] px-4 pb-12 pt-5 sm:pt-7">
       <div className="mx-auto max-w-6xl">
         <Link
           href="/cars"
-          className="text-sm font-semibold text-[#0866F5] hover:underline"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-[#0866F5] transition hover:text-[#0754C7]"
         >
-          ← Back to cars
+          <ArrowLeft className="h-4 w-4" />
+          Back to cars
         </Link>
 
-        <div className="mt-5">
-          <p className="text-sm font-semibold uppercase tracking-wider text-[#0866F5]">
+        <div className="mt-4">
+          <p className="text-xs font-bold uppercase tracking-wider text-[#0866F5]">
             Secure your rental
           </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-[#252A34] sm:text-4xl">
             Checkout
           </h1>
-          <p className="mt-2 text-slate-600">
-            Hi {user?.name}, enter your details and review your rental.
+
+          <p className="mt-2 text-sm leading-6 text-[#667085]">
+            Hi {user?.name}, complete your details and review your rental.
           </p>
         </div>
 
-        <div className="mt-8 grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+        {isUnavailable && (
+          <div
+            role="status"
+            className="mt-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+          >
+            <CarFront className="mt-0.5 h-5 w-5 shrink-0" />
+            <div>
+              <p className="font-semibold">This car is currently unavailable.</p>
+              <p className="mt-1">
+                Please choose another listing to continue.
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-6 grid items-start gap-6 lg:grid-cols-[1.15fr_0.85fr]">
           <form
             onSubmit={handleSubmit}
-            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
+            className="min-w-0 rounded-2xl border border-[#E5EAF1] bg-white p-5 shadow-sm sm:p-7"
           >
-            <h2 className="text-xl font-bold text-slate-900">
-              Contact information
-            </h2>
-            <p className="mt-2 text-sm text-slate-500">
-              Provide accurate contact details for the car owner.
-            </p>
-
-            <div className="mt-6 grid gap-5 sm:grid-cols-2">
-              <div>
-                <label htmlFor="fullName" className={labelClass}>
-                  Full name
-                </label>
-                <input
-                  id="fullName"
-                  type="text"
-                  autoComplete="name"
-                  value={fullName}
-                  onChange={(event) => setFullName(event.target.value)}
-                  required
-                  maxLength={80}
-                  className={inputClass}
-                  placeholder="Your full name"
-                />
+            <div className={sectionClass}>
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-[#0866F5]">
+                  <UserRound className="h-5 w-5" />
+                </span>
+                <div>
+                  <h2 className={sectionHeadingClass}>
+                    Contact information
+                  </h2>
+                  <p className="text-xs text-[#667085]">
+                    How the car owner can contact you.
+                  </p>
+                </div>
               </div>
 
-              <div>
-                <label htmlFor="email" className={labelClass}>
-                  Email address
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  required
-                  maxLength={254}
-                  className={inputClass}
-                  placeholder="you@example.com"
-                />
-              </div>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="fullName" className={labelClass}>
+                    Full name
+                  </label>
+                  <input
+                    id="fullName"
+                    type="text"
+                    autoComplete="name"
+                    value={fullName}
+                    onChange={(event) => setFullName(event.target.value)}
+                    required
+                    maxLength={80}
+                    className={inputClass}
+                    placeholder="Your full name"
+                  />
+                </div>
 
-              <div className="sm:col-span-2">
-                <label htmlFor="phone" className={labelClass}>
-                  Phone number
-                </label>
-                <input
-                  id="phone"
-                  type="tel"
-                  autoComplete="tel"
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                  required
-                  minLength={7}
-                  maxLength={20}
-                  className={inputClass}
-                  placeholder="+251 9XX XXX XXX"
-                />
+                <div>
+                  <label htmlFor="email" className={labelClass}>
+                    Email address
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    required
+                    maxLength={254}
+                    className={inputClass}
+                    placeholder="you@example.com"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label htmlFor="phone" className={labelClass}>
+                    Phone number
+                  </label>
+                  <input
+                    id="phone"
+                    type="tel"
+                    autoComplete="tel"
+                    value={phone}
+                    onChange={(event) => setPhone(event.target.value)}
+                    required
+                    minLength={7}
+                    maxLength={20}
+                    className={inputClass}
+                    placeholder="+251 9XX XXX XXX"
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="mt-8 border-t border-slate-200 pt-7">
-              <h2 className="text-xl font-bold text-slate-900">
-                Identification details
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-500">
+            <div className={`${sectionClass} pt-7`}>
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-[#0866F5]">
+                  <ShieldCheck className="h-5 w-5" />
+                </span>
+                <div>
+                  <h2 className={sectionHeadingClass}>
+                    Identification details
+                  </h2>
+                  <p className="text-xs text-[#667085]">
+                    Demo identification information.
+                  </p>
+                </div>
+              </div>
+
+              <p className="mt-4 rounded-lg bg-[#F4F7FB] p-3 text-xs leading-5 text-[#667085]">
                 Use test details only. This demo stores booking data in your
                 browser and does not securely verify identities.
               </p>
 
-              <div className="mt-5 grid gap-5 sm:grid-cols-2">
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>
                   <label htmlFor="idType" className={labelClass}>
                     ID type
@@ -595,12 +661,20 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <div className="mt-8 border-t border-slate-200 pt-7">
-              <h2 className="text-xl font-bold text-slate-900">
-                Rental dates
-              </h2>
+            <div className={`${sectionClass} pt-7`}>
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-[#0866F5]">
+                  <CalendarDays className="h-5 w-5" />
+                </span>
+                <div>
+                  <h2 className={sectionHeadingClass}>Rental dates</h2>
+                  <p className="text-xs text-[#667085]">
+                    Select your pickup and return dates.
+                  </p>
+                </div>
+              </div>
 
-              <div className="mt-5 grid gap-5 sm:grid-cols-2">
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 <div>
                   <label htmlFor="startDate" className={labelClass}>
                     Pickup date
@@ -644,7 +718,7 @@ export default function CheckoutPage() {
               {blockedDateInRange && (
                 <p
                   role="status"
-                  className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800"
+                  className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm leading-5 text-amber-800"
                 >
                   This date range includes a date the owner has blocked (
                   {blockedDateInRange}). Please select different dates.
@@ -654,22 +728,31 @@ export default function CheckoutPage() {
 
             <BookingLocationMap onLocationsChange={handleLocationsChange} />
 
-            <div className="mt-8 border-t border-slate-200 pt-7">
-              <h2 className="text-xl font-bold text-slate-900">
-                Payment method
-              </h2>
-              <p className="mt-2 text-sm text-slate-500">
+            <div className="pt-7">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-[#0866F5]">
+                  <CreditCard className="h-5 w-5" />
+                </span>
+                <div>
+                  <h2 className={sectionHeadingClass}>Payment method</h2>
+                  <p className="text-xs text-[#667085]">
+                    Select how you want to record this demo booking.
+                  </p>
+                </div>
+              </div>
+
+              <p className="mt-4 text-xs leading-5 text-[#667085]">
                 Choose a simulated payment option. No real payment is processed.
               </p>
 
-              <div className="mt-5 grid gap-3">
+              <div className="mt-4 grid gap-3">
                 {paymentMethods.map((method) => (
                   <label
                     key={method.value}
                     className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${
                       paymentMethod === method.value
                         ? "border-[#0866F5] bg-blue-50"
-                        : "border-slate-200 hover:border-slate-400"
+                        : "border-[#E5EAF1] hover:border-[#98A2B3]"
                     }`}
                   >
                     <input
@@ -678,48 +761,57 @@ export default function CheckoutPage() {
                       value={method.value}
                       checked={paymentMethod === method.value}
                       onChange={() => setPaymentMethod(method.value)}
-                      className="mt-1 accent-[#0866F5]"
+                      className="mt-1 h-4 w-4 accent-[#0866F5]"
                     />
-                    <span>
-                      <span className="block font-semibold text-slate-900">
+
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-[#252A34]">
                         {method.title}
                       </span>
-                      <span className="mt-1 block text-sm text-slate-500">
+                      <span className="mt-1 block text-xs leading-5 text-[#667085]">
                         {method.description}
                       </span>
                     </span>
+
+                    {paymentMethod === method.value && (
+                      <CheckCircle2 className="ml-auto h-5 w-5 shrink-0 text-[#0866F5]" />
+                    )}
                   </label>
                 ))}
               </div>
 
               {paymentMethod !== "pay_at_pickup" && (
-                <p className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+                <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800">
                   Demo payment only. No money is charged, and no real payment
                   provider is contacted.
                 </p>
               )}
             </div>
 
-            <div className="mt-6 rounded-xl bg-slate-50 p-4">
-              <p className="text-sm text-slate-600">Rental duration</p>
-              <p className="mt-1 text-lg font-bold text-slate-900">
-                {rentalDays} {rentalDays === 1 ? "day" : "days"}
-              </p>
+            <div className="mt-7 rounded-xl border border-[#E5EAF1] bg-[#F4F7FB] p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-[#252A34]">
+                    Rental duration
+                  </p>
+                  <p className="mt-1 text-xs text-[#667085]">
+                    {rentalDays} {rentalDays === 1 ? "day" : "days"}
+                  </p>
+                </div>
 
-              <div className="mt-3 flex items-center justify-between gap-4">
-                <span className="text-sm text-slate-600">
-                  Estimated total
-                </span>
-                <span className="text-lg font-bold text-[#0866F5]">
-                  {formatCurrency(totalPrice)}
-                </span>
+                <div className="text-right">
+                  <p className="text-xs text-[#667085]">Estimated total</p>
+                  <p className="mt-1 text-xl font-bold text-[#0866F5]">
+                    {formatCurrency(totalPrice)}
+                  </p>
+                </div>
               </div>
             </div>
 
             {error && (
               <p
                 role="alert"
-                className="mt-5 rounded-lg bg-red-50 p-3 text-sm text-red-700"
+                className="mt-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm leading-5 text-red-700"
               >
                 {error}
               </p>
@@ -730,86 +822,109 @@ export default function CheckoutPage() {
               disabled={
                 isSubmitting || isUnavailable || Boolean(blockedDateInRange)
               }
-              className="mt-6 min-h-12 w-full rounded-lg bg-[#0866F5] px-5 py-3 font-semibold text-white transition hover:bg-[#0754C7] disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-5 flex min-h-12 w-full items-center justify-center rounded-xl bg-[#0866F5] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#0754C7] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isUnavailable
                 ? "Car Currently Unavailable"
                 : blockedDateInRange
                   ? "Choose Available Dates"
                   : isSubmitting
-                    ? "Processing booking…"
+                    ? "Processing booking..."
                     : paymentMethod === "pay_at_pickup"
                       ? "Submit booking request →"
                       : "Simulate payment & book →"}
             </button>
 
-            <p className="mt-3 text-xs leading-5 text-slate-500">
+            <p className="mt-3 text-center text-xs leading-5 text-[#667085]">
               Your booking remains pending until the owner approves it.
               This demo does not collect payments.
             </p>
           </form>
 
-          <aside className="h-fit overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="relative h-56 bg-slate-100">
+          <aside className="h-fit overflow-hidden rounded-2xl border border-[#E5EAF1] bg-white shadow-sm lg:sticky lg:top-24">
+            <div className="relative h-52 shrink-0 overflow-hidden bg-[#F4F7FB]">
               {car.image ? (
                 <Image
                   src={car.image}
                   alt={`${car.year} ${car.make} ${car.model}`}
                   fill
                   sizes="(max-width: 1024px) 100vw, 40vw"
-                  className="object-cover"
+                  className="object-cover object-top"
                 />
               ) : (
-                <div className="flex h-full items-center justify-center text-slate-400">
+                <div className="flex h-full items-center justify-center text-sm text-[#98A2B3]">
                   Car image unavailable
                 </div>
               )}
             </div>
 
-            <div className="p-6">
-              <p className="text-sm font-semibold text-[#0866F5]">
-                Your selected car
+            <div className="p-5 sm:p-6">
+              <p className="text-xs font-medium text-[#667085]">
+                {car.year} · {car.location}
               </p>
-              <h2 className="mt-2 text-2xl font-bold text-slate-900">
-                {car.year} {car.make} {car.model}
-              </h2>
-              <p className="mt-2 text-sm text-slate-500">{car.location}</p>
 
-              <div className="mt-4 flex flex-wrap gap-2 text-sm text-slate-600">
+              <h2 className="mt-2 text-xl font-bold text-[#252A34]">
+                {car.make} {car.model}
+              </h2>
+
+              <p className="mt-2 text-sm leading-6 text-[#667085]">
+                {car.description}
+              </p>
+
+              <div className="mt-4 flex min-h-8 flex-wrap gap-2 text-xs text-[#667085]">
+                {car.seats && (
+                  <span className="rounded-md bg-[#F4F7FB] px-2.5 py-1.5">
+                    {car.seats} seats
+                  </span>
+                )}
+
                 {car.transmission && (
-                  <span className="rounded-full bg-slate-100 px-3 py-1">
+                  <span className="rounded-md bg-[#F4F7FB] px-2.5 py-1.5">
                     {car.transmission}
                   </span>
                 )}
+
                 {car.fuelType && (
-                  <span className="rounded-full bg-slate-100 px-3 py-1">
+                  <span className="rounded-md bg-[#F4F7FB] px-2.5 py-1.5">
                     {car.fuelType}
-                  </span>
-                )}
-                {car.seats && (
-                  <span className="rounded-full bg-slate-100 px-3 py-1">
-                    {car.seats} seats
                   </span>
                 )}
               </div>
 
-              <div className="mt-6 border-t border-slate-200 pt-5">
-                <div className="flex items-center justify-between gap-4 text-sm text-slate-600">
-                  <span>Daily rental price</span>
-                  <span className="font-semibold text-slate-900">
-                    {formatCurrency(dailyPrice)} / day
+              <div className="mt-5 flex items-baseline gap-1">
+                <span className="text-xl font-bold text-[#0866F5]">
+                  {formatCurrency(dailyPrice)}
+                </span>
+                <span className="text-sm text-[#667085]">/ day</span>
+              </div>
+
+              {isUnavailable && (
+                <p className="mt-4 rounded-lg bg-red-50 p-3 text-xs font-medium text-red-700">
+                  This car is currently unavailable.
+                </p>
+              )}
+
+              <div className="mt-5 border-t border-[#E5EAF1] pt-5">
+                <h3 className="text-sm font-bold text-[#252A34]">
+                  Booking summary
+                </h3>
+
+                <div className="mt-4 flex items-center justify-between gap-4 text-sm">
+                  <span className="text-[#667085]">Daily price</span>
+                  <span className="font-semibold text-[#252A34]">
+                    {formatCurrency(dailyPrice)}
                   </span>
                 </div>
 
-                <div className="mt-3 flex items-center justify-between gap-4 text-sm text-slate-600">
-                  <span>Rental duration</span>
-                  <span className="font-semibold text-slate-900">
-                    {rentalDays} days
+                <div className="mt-3 flex items-center justify-between gap-4 text-sm">
+                  <span className="text-[#667085]">Rental duration</span>
+                  <span className="font-semibold text-[#252A34]">
+                    {rentalDays} {rentalDays === 1 ? "day" : "days"}
                   </span>
                 </div>
 
-                <div className="mt-5 flex items-center justify-between gap-4 border-t border-slate-200 pt-5">
-                  <span className="font-bold text-slate-900">
+                <div className="mt-4 flex items-center justify-between gap-4 border-t border-[#E5EAF1] pt-4">
+                  <span className="text-sm font-bold text-[#252A34]">
                     Estimated total
                   </span>
                   <span className="text-xl font-bold text-[#0866F5]">
@@ -818,9 +933,17 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              <p className="mt-4 text-xs leading-5 text-slate-500">
-                This is a frontend demo. Your booking is not confirmed until
-                the owner approves it.
+              <div className="mt-5 flex items-start gap-2 rounded-lg bg-[#F4F7FB] p-3">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#0866F5]" />
+                <p className="text-xs leading-5 text-[#667085]">
+                  Your selected pickup and drop-off locations will be included
+                  in your booking request.
+                </p>
+              </div>
+
+              <p className="mt-4 text-xs leading-5 text-[#98A2B3]">
+                Frontend demo. Your booking is not confirmed until the owner
+                approves it.
               </p>
             </div>
           </aside>

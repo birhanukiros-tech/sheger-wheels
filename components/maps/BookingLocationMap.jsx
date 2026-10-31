@@ -11,6 +11,13 @@ import {
   useMap,
 } from "react-leaflet";
 import L from "leaflet";
+import {
+  MapPin,
+  Navigation,
+  RotateCcw,
+  Clock3,
+  Route,
+} from "lucide-react";
 import "leaflet/dist/leaflet.css";
 
 const defaultPickup = [9.0222, 38.7468];
@@ -34,15 +41,15 @@ function MapBounds({ pickup, dropoff }) {
   const map = useMap();
 
   useEffect(() => {
-    map.fitBounds([pickup, dropoff], { padding: [45, 45] });
+    map.fitBounds([pickup, dropoff], {
+      padding: [45, 45],
+    });
   }, [map, pickup, dropoff]);
 
   return null;
 }
 
-export default function BookingLocationMap({
-  onLocationsChange,
-}) {
+export default function BookingLocationMap({ onLocationsChange }) {
   const [pickup, setPickup] = useState(defaultPickup);
   const [dropoff, setDropoff] = useState(defaultDropoff);
   const [route, setRoute] = useState([]);
@@ -90,6 +97,7 @@ export default function BookingLocationMap({
             lng,
           ])
         );
+
         setDistance((selectedRoute.distance / 1000).toFixed(1));
         setDuration(Math.ceil(selectedRoute.duration / 60));
       } catch (error) {
@@ -97,7 +105,9 @@ export default function BookingLocationMap({
           setRoute([]);
           setDistance(null);
           setDuration(null);
-          setRouteError("Route information is temporarily unavailable.");
+          setRouteError(
+            "Route information is temporarily unavailable."
+          );
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -111,33 +121,59 @@ export default function BookingLocationMap({
     return () => controller.abort();
   }, [pickup, dropoff]);
 
+  function resetLocations() {
+    setPickup(defaultPickup);
+    setDropoff(defaultDropoff);
+  }
+
   return (
-    <section className="mt-8 border-t border-slate-200 pt-7">
-      <h2 className="text-xl font-bold text-slate-900">
-        Pickup and drop-off locations
-      </h2>
+    <section className="mt-7 rounded-2xl border border-[#E5EAF1] bg-white p-5 sm:p-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <MapPin className="h-5 w-5 text-[#0866F5]" />
+            <h2 className="text-lg font-bold text-[#252A34]">
+              Pickup and drop-off locations
+            </h2>
+          </div>
 
-      <p className="mt-2 text-sm leading-6 text-slate-500">
-        Drag either marker to select your preferred locations.
-      </p>
+          <p className="mt-2 text-sm leading-6 text-[#667085]">
+            Drag the markers to choose your preferred pickup and
+            drop-off locations.
+          </p>
+        </div>
 
-      <div className="mt-5 flex flex-wrap gap-4 text-sm">
+        <button
+          type="button"
+          onClick={resetLocations}
+          className="inline-flex min-h-9 items-center gap-2 self-start rounded-lg border border-[#E5EAF1] px-3 py-2 text-sm font-medium text-[#667085] transition-colors hover:border-[#0866F5] hover:text-[#0866F5]"
+        >
+          <RotateCcw className="h-4 w-4" />
+          Reset locations
+        </button>
+      </div>
+
+      <div className="mt-5 flex flex-wrap gap-x-6 gap-y-3">
         <div className="flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#0866F5] font-bold text-white">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0866F5] text-sm font-bold text-white">
             P
           </span>
-          <span className="font-medium text-slate-700">Pickup</span>
+          <span className="text-sm font-medium text-[#252A34]">
+            Pickup
+          </span>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#E99230] font-bold text-white">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E99230] text-sm font-bold text-white">
             D
           </span>
-          <span className="font-medium text-slate-700">Drop-off</span>
+          <span className="text-sm font-medium text-[#252A34]">
+            Drop-off
+          </span>
         </div>
       </div>
 
-      <div className="mt-4 h-[380px] overflow-hidden rounded-xl border border-slate-200">
+      <div className="mt-4 h-[300px] overflow-hidden rounded-xl border border-[#E5EAF1] bg-[#F4F7FB] sm:h-[340px]">
         <MapContainer
           center={[9.03, 38.74]}
           zoom={13}
@@ -192,44 +228,42 @@ export default function BookingLocationMap({
         </MapContainer>
       </div>
 
-      <div className="mt-4 rounded-xl bg-slate-50 p-4">
+      <div className="mt-4 rounded-xl border border-[#E5EAF1] bg-[#F4F7FB] p-4">
         {routeLoading ? (
-          <p className="text-sm text-slate-500">
-            Calculating driving route…
-          </p>
+          <div className="flex items-center gap-2 text-sm text-[#667085]">
+            <Navigation className="h-4 w-4 animate-pulse text-[#0866F5]" />
+            Calculating driving route...
+          </div>
         ) : routeError ? (
-          <p className="text-sm text-amber-700">{routeError}</p>
+          <p className="text-sm text-[#667085]">{routeError}</p>
         ) : distance !== null ? (
-          <div className="flex flex-wrap gap-8">
-            <div>
-              <p className="text-xs text-slate-500">Driving distance</p>
-              <p className="mt-1 font-bold text-slate-900">
-                {distance} km
-              </p>
+          <div className="flex flex-wrap gap-6">
+            <div className="flex items-center gap-2">
+              <Route className="h-4 w-4 text-[#0866F5]" />
+              <div>
+                <p className="text-xs text-[#667085]">Distance</p>
+                <p className="text-sm font-semibold text-[#252A34]">
+                  {distance} km
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-slate-500">Estimated driving time</p>
-              <p className="mt-1 font-bold text-slate-900">
-                {duration} minutes
-              </p>
+
+            <div className="flex items-center gap-2">
+              <Clock3 className="h-4 w-4 text-[#0866F5]" />
+              <div>
+                <p className="text-xs text-[#667085]">Estimated driving time</p>
+                <p className="text-sm font-semibold text-[#252A34]">
+                  {duration} min
+                </p>
+              </div>
             </div>
           </div>
         ) : null}
-
-        <button
-          type="button"
-          onClick={() => {
-            setPickup(defaultPickup);
-            setDropoff(defaultDropoff);
-          }}
-          className="mt-3 text-sm font-semibold text-[#0866F5] hover:underline"
-        >
-          Reset locations
-        </button>
       </div>
 
-      <p className="mt-3 text-xs text-slate-400">
-        Map data © OpenStreetMap contributors. Route estimates provided by OSRM.
+      <p className="mt-3 text-xs leading-5 text-[#98A2B3]">
+        Map data © OpenStreetMap contributors. Route estimates provided
+        by OSRM.
       </p>
     </section>
   );
